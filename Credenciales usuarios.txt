@@ -1,0 +1,9 @@
+Administrador:
+
+Email: jose@onix.com
+Contraseña: onix1433
+
+Usuario sin permisos:
+
+Email: alicia@onix.com
+Contraseña: alicia123
