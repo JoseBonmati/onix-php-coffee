@@ -46,12 +46,13 @@
 
         $start = ($page - 1) * $resultsPP;
 
-        $allowedColumns = ["id","nombre","email","contrasenya","telefono","rol","estado"];
+        $allowedColumns = ["id","nombre","email","telefono","rol","estado"];
         if (!in_array($order, $allowedColumns)) $order = "id";
         $orderType = strtoupper($orderType) === "DESC" ? "DESC" : "ASC";
 
         $query = $con->prepare("SELECT id, nombre AS name, email, contrasenya AS password, telefono AS phone, rol AS role, estado AS status FROM usuarios 
                                 ORDER BY $order $orderType LIMIT :inicio, :resultados");
+                                
         $query->bindParam(":inicio", $start, PDO::PARAM_INT);
         $query->bindParam(":resultados", $resultsPP, PDO::PARAM_INT);
         $query->execute();

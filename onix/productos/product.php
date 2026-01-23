@@ -9,6 +9,7 @@
         private $price;
         private $categoryName;
         private $image;
+        private $status;
 
         public function getId() {
             return $this->id;
@@ -33,6 +34,10 @@
         public function getImagen() {
             return $this->image;
         }
+
+        public function getEstado() {
+            return $this->status;
+        }
     }
 
     // Retrieve products with pagination and sorting
@@ -44,7 +49,7 @@
         if (!in_array($order, $allowedColumns)) $order = "p.id";
         $orderType = strtoupper($orderType) === "DESC" ? "DESC" : "ASC";
 
-        $query = $con->prepare("SELECT p.id, p.nombre AS name, p.descripcion AS description, p.precio AS price, c.nombre AS categoryName, p.imagen AS image 
+        $query = $con->prepare("SELECT p.id, p.nombre AS name, p.descripcion AS description, p.precio AS price, c.nombre AS categoryName, p.imagen AS image, p.estado AS status
                                 FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id ORDER BY $order $orderType LIMIT :inicio, :resultados");
         $query->bindParam(":inicio", $start, PDO::PARAM_INT);
         $query->bindParam(":resultados", $resultsPP, PDO::PARAM_INT);

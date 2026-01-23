@@ -6,11 +6,6 @@ const password = document.getElementById("contrasenya");
 const errors = document.getElementById("errores");
 
 function validacion() {
-    // Remove error class before validation
-    if (nameField) nameField.classList.remove("error");
-    if (email) email.classList.remove("error");
-    if (phone) phone.classList.remove("error");
-    if (password) password.classList.remove("error");
 
     // Store error messages
     let errorMessages = [];
@@ -50,12 +45,8 @@ function validacion() {
             let value = field.value;
             if (value == null || value.length === 0 || regExp_whitespace.test(value)) {
                 errorMessages.push(mandatoryMessage);
-                field.classList.add("error");
-                if (errorMessages.length === 1) field.focus();
             } else if (regex && !(regex.test(value))) {
                 errorMessages.push(formatMessage);
-                field.classList.add("error");
-                if (errorMessages.length === 1) field.focus();
             }
         }
     }

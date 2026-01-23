@@ -1,4 +1,5 @@
 <?php
+
     require_once "conectar_db.php";
     $con = conectar();
     session_start();
@@ -16,40 +17,36 @@
     $query->execute([":id" => $sessionId]);
     $admin = $query->fetch();
     $adminName = $admin ? $admin["nombre"] : "Administrador";
+
 ?>
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Panel de Administración</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../estilos.css">
+    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <title>Panel Administración Onix</title>
 </head>
-<body class="bg-dark text-light">
-    <header class="sticky-top bg-dark border-3 border-bottom border-info py-2">
-        <nav class="navbar navbar-dark navbar-expand-lg container-fluid">
-            <a class="navbar-brand ms-3" href="../index.php">
-                <img src="../assets/logos/taza-cafe.png" alt="Logo" width="64" height="64">
-            </a>
-            <button class="navbar-toggler me-3 border-info" type="button" data-bs-toggle="collapse" data-bs-target="#navAdmin" aria-controls="navAdmin" aria-expanded="false" aria-label="Abrir menú">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div id="navAdmin" class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto align-items-center fs-4 fw-semibold gap-lg-4">
-                    <li class="nav-item"><a class="nav-link text-light" href="../carta.php">Carta</a></li>
-                    <li class="nav-item"><a class="nav-link text-light" href="../contacto.php">Contacto</a></li>
-                </ul>
+<body>
+    <div class="d-flex justify-content-center align-items-center py-5 onix-bg ">
+        <div class="p-4 text-center onix-card">
+            <h2 class="fw-bold mb-4">Panel de Administración</h2>
+            <p class="fw-semibold mb-4">Bienvenido/a, <?= htmlspecialchars($adminName) ?></p>
+            <div class="d-grid gap-3">
+                <a href="../usuarios/usuarioConsulta.php" class="btn fw-semibold btn-onix">Gestión de Usuarios</a>
+                <a href="../productos/productoConsulta.php" class="btn fw-semibold btn-onix">Gestión de Productos</a>
+                <a href="../reservas/reservaConsulta.php" class="btn fw-semibold btn-onix">Gestión de Reservas</a>
+                <a href="../categorias/categoriaConsulta.php" class="btn fw-semibold btn-onix">Gestión de Categorías</a>
+                <hr class="onix-divider">
+                <a href="../index.php" class="btn btn-outline-secondary">Volver</a>
             </div>
-        </nav>
-    </header>
-    <main class="container py-5 text-center">
-        <h1 class="mb-4">Bienvenido/a <?= htmlspecialchars($adminName) ?></h1>
-        <div class="d-flex flex-column gap-3 mx-auto" style="max-width: 400px;">
-            <a href="../usuarios/usuarioConsulta.php" class="btn btn-info btn-lg">Gestión de Usuarios</a>
-            <a href="../productos/productoConsulta.php" class="btn btn-info btn-lg">Gestión de Productos</a>
-            <a href="../reservas/reservaConsulta.php" class="btn btn-outline-info btn-lg">Gestión de Reservas</a>
-            <a href="../categorias/categoriaConsulta.php" class="btn btn-info btn-lg">Gestión de Categorías</a>
         </div>
-    </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

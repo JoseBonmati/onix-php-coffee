@@ -7,12 +7,6 @@ const image = document.getElementById("imagen");
 const errors = document.getElementById("errores");
 
 function validacion() {
-    // Remove error class before validation
-    if (nameField) nameField.classList.remove("error");
-    if (description) description.classList.remove("error");
-    if (price) price.classList.remove("error");
-    if (category) category.classList.remove("error");
-    if (image) image.classList.remove("error");
 
     // Store error messages
     let errorMessages = [];
@@ -40,12 +34,8 @@ function validacion() {
             let value = field.value;
             if (value == null || value.length === 0 || regExp_whitespace.test(value)) {
                 errorMessages.push(mandatoryMessage);
-                field.classList.add("error");
-                if (errorMessages.length === 1) field.focus();
             } else if (regex && !(regex.test(value))) {
                 errorMessages.push(formatMessage);
-                field.classList.add("error");
-                if (errorMessages.length === 1) field.focus();
             }
         }
     }
@@ -58,15 +48,11 @@ function validacion() {
     // Validate category (select)
     if (category && category.value === "") {
         errorMessages.push("Debe seleccionar una categoría.");
-        category.classList.add("error");
-        if (errorMessages.length === 1) category.focus();
     }
 
     // Validate image (file)
     if (image && image.value === "") {
         errorMessages.push("Debe subir una imagen.");
-        image.classList.add("error");
-        if (errorMessages.length === 1) image.focus();
     }
 
     // Show errors if any

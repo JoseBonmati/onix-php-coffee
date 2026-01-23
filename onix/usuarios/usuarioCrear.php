@@ -1,4 +1,5 @@
 <?php 
+
     require_once "../utilidades/conectar_db.php";
     $con = conectar();
     session_start();
@@ -59,64 +60,91 @@
             ]);
 
             if ($stmt->rowCount() > 0) {
-                if ($_SESSION["rol"] === "administrador") {
-                    header("Location: usuarioConsulta.php?nameN=$name&emailN=$email");
-                } else {
-                    header("Location: login.php?nameN=$name&emailN=$email");
+                if (isset($_SESSION["rol"]) && $_SESSION["rol"] === "administrador") {
+                    header("Location: usuarioConsulta.php?nombreN=" . urlencode($name) . "&emailN=" . urlencode($email));
+                    exit;
                 }
+
+                // If you are a regular user registering, you will be logged in automatically
+                $idNewUser = $con->lastInsertId();
+
+                $_SESSION["id"] = $idNewUser;
+                $_SESSION["email"] = $email;
+                $_SESSION["rol"] = "usuario";
+                $_SESSION["nombre"] = $nombre;
+
+                header("Location: ../index.php?nombreN=" . urlencode($nombre) . "&emailN=" . urlencode($email));
+                exit;
             } else {
                 $errorMessages[] = "Ha ocurrido un error con la base de datos";
             }
         }
     }
+
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuevos usuarios</title>
-    <style> .error{border: solid 2px #FF0000;} </style>
+    <title>Nuevo usuario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../estilos.css">
+    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
 </head>
 <body>
+    <div class="d-flex justify-content-center align-items-center onix-bg">
+        <div class="p-4 onix-card">
+            <h2 class="text-center mb-4 fw-bold">Crear usuario</h2>
 
-    <h1>Formulario de creación de usuarios</h1>
-    <p>Rellene los siguientes datos:</p>
+            <!-- Server-side errors -->
+            <div class="mb-3">
+                <?php
+                    if (!empty($errorMessages)) {
+                        echo "<p class='alert alert-danger mb-0'>" . implode("<br>", $errorMessages) . "</p>";
+                    }
+                ?>
+            </div>
 
-    <div id="errores" style="color:red">
-        <?php 
-            // Display error messages if any
-            if (!empty($errorMessages)) {
-                echo "<b>" . implode("<br>", $errorMessages) . "</b>";
-            }
-        ?>
+            <!-- Client-side errors -->
+            <div id="errores" class="mb-3 text-danger fw-semibold"></div>
+            
+            <form name="fCreacion" id="fCreacion" method="post" action="usuarioCrear.php">
+                <p class="mb-3 text-center fw-semibold">Rellena los siguientes datos para crear un nuevo usuario.</p>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Correo electrónico</label>
+                    <input type="text" class="form-control onix-input" name="email" id="email" maxlength="50" value="<?= isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '' ?>">
+                </div>
+
+                <div class="mb-3">
+                    <label for="contrasenya" class="form-label">Contraseña</label>
+                    <input type="password" class="form-control onix-input" name="contrasenya" id="contrasenya" maxlength="30">
+                </div>
+
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control onix-input" name="nombre" id="nombre" value="<?= isset($_POST['nombre']) ? htmlspecialchars($_POST['nombre']) : '' ?>">
+                </div>
+
+                <div class="mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="text" class="form-control onix-input" name="telefono" id="telefono" maxlength="9" value="<?= isset($_POST['telefono']) ? htmlspecialchars($_POST['telefono']) : '' ?>">
+                </div>
+
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn fw-semibold btn-onix" name="enviar">Crear usuario</button>
+                    <hr class="onix-divider">
+                    <a href="<?= (isset($_SESSION['rol']) && $_SESSION['rol'] === 'administrador') ? 'usuarioConsulta.php' : 'login.php' ?>" 
+                       class="btn btn-outline-secondary">Volver</a>
+                </div>
+            </form>
+        </div>
     </div>
-
-    <form name="fCreacion" id="fCreacion" method="post" action="usuarioCrear.php">
-
-        <fieldset>
-            <legend>Datos de sesión:</legend>
-            Email: <input type="text" name="email" id="email" size="50" maxlength="50" value="<?php if(isset($_POST['email'])) echo htmlspecialchars($_POST['email']); ?>">
-            <br><br>
-
-            Contraseña: <input type="password" name="contrasenya" id="contrasenya" size="30" maxlength="30">
-            <br><br>
-        </fieldset>
-
-        <fieldset>
-            <legend>Datos personales:</legend>
-            Nombre: <input type="text" name="nombre" id="nombre" size="50" maxlength="50" value="<?php if(isset($_POST['nombre'])) echo htmlspecialchars($_POST['nombre']); ?>">
-            <br><br>
-
-            Teléfono: <input type="text" name="telefono" id="telefono" size="9" maxlength="9" value="<?php if(isset($_POST['telefono'])) echo htmlspecialchars($_POST['telefono']); ?>">
-        </fieldset>
-
-        <br>
-        <a href="<?= (isset($_SESSION['rol']) && $_SESSION['rol'] === 'administrador') ? 'usuarioConsulta.php' : 'login.php' ?>" 
-           style="text-decoration:none; color:black; padding:5px; border:1px solid #000; background:#eee;">Volver</a>
-        <input type="submit" value="Enviar" name="enviar"/>
-    </form>
-
-    <script type="text/javascript" src="usuariosValidacionForm.js"></script> 
+    <script src="usuariosValidacionForm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
