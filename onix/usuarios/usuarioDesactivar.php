@@ -52,12 +52,18 @@
         ":id" => $id
     ]);
 
-    // If a normal user is deactivated → log out
+    // If a normal user is deactivated log out
     if (!$admin && $action === "desactivar") {
         session_unset();
         session_destroy();
         header("Location: login.php?cuentaDesactivada=1");
         exit;
+    }
+
+    // Return to user profile
+    if (isset($_GET["onlyMine"]) && $_GET["onlyMine"] == 1) { 
+        header("Location: perfil.php?estadoCambiado=1"); 
+        exit; 
     }
 
     // Return to user editing

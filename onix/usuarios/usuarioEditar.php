@@ -112,17 +112,17 @@
 
                 // If you are an administrator and are editing your user, return to your profile
                 if ($_SESSION["rol"] === "administrador" && $returnTo === "onlyMine") {
-                    header("Location: perfil.php?nombreE=" . urlencode($name) . "&emailE=" . urlencode($email));
+                    header("Location: perfil.php?nameE=" . urlencode($name) . "&emailE=" . urlencode($email));
                     exit;
     
                 // If you are an administrator editing another user, return to the query
                 } elseif ($_SESSION["rol"] === "administrador") {
-                    header("Location: usuarioConsulta.php?nombreE=" . urlencode($name) . "&emailE=" . urlencode($email));
+                    header("Location: usuarioConsulta.php?nameE=" . urlencode($name) . "&emailE=" . urlencode($email));
                     exit;
 
                 } else {
                     // If you are a regular user, you will always return to your profile
-                    header("Location: perfil.php?nombreE=" . urlencode($name) . "&emailE=" . urlencode($email));
+                    header("Location: perfil.php?nameE=" . urlencode($name) . "&emailE=" . urlencode($email));
                     exit;
                 }
 

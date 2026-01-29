@@ -73,7 +73,7 @@
                 <a href="cerrarSesion.php" class="btn btn-outline-danger fw-semibold">Cerrar sesión</a>
 
                 <?php if ($user["rol"] !== "administrador"): ?>
-                    <a href="usuarioDesactivar.php?id=<?= htmlspecialchars(urlencode($user["id"])) ?>&action=deactivate" class="btn btn-outline-warning fw-semibold"
+                    <a href="usuarioDesactivar.php?id=<?= htmlspecialchars(urlencode($user["id"])) ?>&action=desactivar&onlyMine=1" class="btn btn-outline-warning fw-semibold"
                     onclick="return confirm('¿Seguro que deseas desactivar tu cuenta?');">Desactivar mi cuenta</a>
                 <?php endif; ?>
                 
