@@ -1,65 +1,84 @@
 <?php
 
-    // User entity class
-    class User {
+    require_once __DIR__ . '/../utils/Database.php';
 
-        private $id;
-        private $name;
-        private $email;
-        private $password;
-        private $phone;
-        private $role;
-        private $status;
-    
-        public function getId() {
+    // User Entity Class
+    class User {
+        
+        // Properties matching the translated database aliases with strict typing
+        private ?int $id = null;
+        private ?string $name = null;
+        private ?string $email = null;
+        private ?string $password = null;
+        private ?string $phone = null;
+        private ?string $role = null;
+        private ?string $status = null;
+
+        //Getters with strict typing
+        public function getId(): ?int {
             return $this->id;
         }
 
-        public function getNombre() {
+        public function getName(): ?string {
             return $this->name;
         }
 
-        public function getEmail() {
+        public function getEmail(): ?string {
             return $this->email;
         }
 
-        public function getContrasenya() {
+        public function getPassword(): ?string {
             return $this->password;
         }
 
-        public function getTelefono() {
+        public function getPhone(): ?string {
             return $this->phone;
         }
 
-        public function getRol() {
+        public function getRole(): ?string {
             return $this->role;
         }
 
-        public function getEstado() {
+        public function getStatus(): ?string {
             return $this->status;
         }
-        
-    }
 
-    // Retrieve users with pagination and sorting
-    function obtenerUsuarios($con, $page, $resultsPP, $order, $orderType) {
 
-        $start = ($page - 1) * $resultsPP;
+        //Fetches users with pagination, sorting, and automatic mapping to the User class.
+        public static function getUsers(int $page, int $perPage, string $orderBy, string $sortDirection): array {
+            
+            $db = Database::getConnection();
+            $offset = ($page - 1) * $perPage;
 
-        $allowedColumns = ["id","nombre","email","telefono","rol","estado"];
-        if (!in_array($order, $allowedColumns)) $order = "id";
-        $orderType = strtoupper($orderType) === "DESC" ? "DESC" : "ASC";
+            // White-list mapping parameter keys to avoid SQL Injection and map EN to ES for sorting
+            $allowedColumns = [
+                "id" => "id",
+                "name" => "nombre",
+                "email" => "email",
+                "phone" => "telefono",
+                "role" => "rol",
+                "status" => "estado"
+            ];
 
-        $query = $con->prepare("SELECT id, nombre AS name, email, contrasenya AS password, telefono AS phone, rol AS role, estado AS status FROM usuarios 
-                                ORDER BY $order $orderType LIMIT :inicio, :resultados");
-                                
-        $query->bindParam(":inicio", $start, PDO::PARAM_INT);
-        $query->bindParam(":resultados", $resultsPP, PDO::PARAM_INT);
-        $query->execute();
+            // Fallback to safe defaults if parameters are invalid
+            $orderField = $allowedColumns[$orderBy] ?? "id";
+            $sortDirection = strtoupper($sortDirection) === "DESC" ? "DESC" : "ASC";
 
-        // Map results to User class
-        $query->setFetchMode(PDO::FETCH_CLASS, "User");
-        return $query->fetchAll();
+            // Clean SQL query with aliases to hydrate the User class seamlessly
+            $sql = "SELECT id, nombre AS name, email, contrasenya AS password, telefono AS phone, rol AS role, estado AS status 
+                    FROM usuarios ORDER BY $orderField $sortDirection LIMIT :offset, :limit";
+
+            $stmt = $db->prepare($sql);
+            
+            // Bind variables to ensure correct integer hydration
+            $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
+            $stmt->bindValue(":limit", $perPage, PDO::PARAM_INT);
+            $stmt->execute();
+
+            // Direct OOP Mapping
+            $stmt->setFetchMode(PDO::FETCH_CLASS, "User");
+            return $stmt->fetchAll();
+        }
     }
 
 ?>

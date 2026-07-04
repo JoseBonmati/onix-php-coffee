@@ -12,7 +12,7 @@
                 </div>
 
                 <div class="col-lg-4 text-center">
-                    <img src="../assets/logos/logo-grande.png" alt="Logo grande" class="img-fluid" style="max-width: 300px;">
+                    <img src="/assets/brand/logo-grande.png" alt="Logo grande" class="img-fluid" style="max-width: 300px;">
                 </div>
 
                 <div class="col-lg-4 text-lg-end text-center">

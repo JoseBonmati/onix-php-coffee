@@ -1,5 +1,5 @@
 <?php
-    require_once "plantillas/header.php";
+    require_once "templates/header.php";
 ?>
 
     <section class="py-5">
@@ -36,25 +36,25 @@
                     if (isset($_GET["error"])) {
                         $error = htmlspecialchars($_GET["error"]);
 
-                        if ($error === "datosInvalidos") {
+                        if ($error === "invalid_data") {
                             echo "<p class='alert alert-danger text-center mb-4'>Debes completar todos los campos correctamente.</p>";
                         }
-                        if ($error === "fechaInvalida") {
+                        if ($error === "invalid_date") {
                             echo "<p class='alert alert-danger text-center mb-4'>La fecha seleccionada no es válida.</p>";
                         }
-                        if ($error === "fechaPasada") {
+                        if ($error === "past_date") {
                             echo "<p class='alert alert-danger text-center mb-4'>No puedes reservar en una fecha pasada.</p>";
                         }
-                        if ($error === "domingo") {
+                        if ($error === "sunday") {
                             echo "<p class='alert alert-danger text-center mb-4'>La cafetería permanece cerrada los domingos. Selecciona otro día.</p>";
                         }
-                        if ($error === "horaInvalida") {
+                        if ($error === "invalid_time") {
                             echo "<p class='alert alert-danger text-center mb-4'>La hora seleccionada no es válida.</p>";
                         }
-                        if ($error === "aforoCompleto") {
+                        if ($error === "fully_booked") {
                             echo "<p class='alert alert-danger text-center mb-4'>No quedan plazas disponibles a esa hora. Prueba otra hora o día.</p>";
                         }
-                        if ($error === "reservaNoEncontrada") {
+                        if ($error === "booking_not_found") {
                             echo "<p class='alert alert-danger text-center mb-4'>No se ha encontrado la reserva.</p>";
                         }
                     }
@@ -64,7 +64,7 @@
             </div>
 
             <!-- Client-side errors -->
-            <div id="errores" class="mb-5 text-center text-danger fw-semibold"></div>
+            <div id="errors" class="mb-5 text-center text-danger fw-semibold"></div>
 
             <div class="row justify-content-center">
                 <div class="col-lg-5 mb-4">
@@ -97,15 +97,15 @@
                     <div class="onix-card p-4 text-light">
                         <h2 class="text-onix fw-bold mb-4 text-center">Reserva</h2>
 
-                        <form action="reservas/reservaProcesar.php" method="post">
+                        <form action="/bookings/booking_process.php" method="post">
                             <div class="mb-3">
-                                <label for="fecha" class="form-label">Fecha</label>
-                                <input type="text" id="fecha" name="fecha" class="form-control" placeholder="Selecciona una fecha" autocomplete="off" readonly>
+                                <label for="date" class="form-label">Fecha</label>
+                                <input type="text" id="date" name="date" class="form-control" placeholder="Selecciona una fecha" autocomplete="off" readonly>
                             </div>
 
                             <div class="mb-3">
-                                <label for="personas" class="form-label">Personas</label>
-                                <select id="personas" name="personas" class="form-select">
+                                <label for="guests" class="form-label">Personas</label>
+                                <select id="guests" name="guests" class="form-select">
                                     <option selected disabled value="">Seleccione</option>
                                     <?php for ($i = 1; $i <= 30; $i++): ?>
                                         <option value="<?= $i ?>"><?= $i ?> persona<?= $i > 1 ? 's' : '' ?></option>
@@ -114,8 +114,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="hora" class="form-label">Hora</label>
-                                <select id="hora" name="hora" class="form-select">
+                                <label for="time" class="form-label">Hora</label>
+                                <select id="time" name="time" class="form-select">
                                     <option selected disabled value="">Seleccione una fecha primero</option>
                                 </select>
                             </div>
@@ -125,7 +125,7 @@
                                 <?php if (isset($_SESSION["id"])): ?>
                                     <button type="submit" class="btn btn-onix w-100">Reservar</button>
                                 <?php else: ?>
-                                    <a href="usuarios/login.php" class="btn btn-outline-onix w-100">Iniciar sesión para reservar</a>
+                                    <a href="/users/login.php" class="btn btn-outline-onix w-100">Iniciar sesión para reservar</a>
                                 <?php endif; ?>
                             </div>
                         </form>
@@ -143,7 +143,7 @@
         </div>
     </section>
 
-    <script src="reservas/calendario.js"></script>
-    <script src="reservas/reservasValidacionForm.js"></script>
+    <script src="/bookings/calendar.js"></script>
+    <script src="/bookings/bookings_validation_form.js"></script>
 
-<?php require_once "plantillas/footer.php"; ?>
+<?php require_once "templates/footer.php"; ?>

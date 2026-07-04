@@ -1,17 +1,19 @@
 <?php 
 
-    require_once "../utilidades/conectar_db.php";
-    $con = conectar();
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    // Store error messages
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
+
     $errorMessages = [];
 
-    if (isset($_POST["enviar"])) {
+    if (isset($_POST["register_submit"])) {
         $email = trim($_POST["email"] ?? "");
-        $password = trim($_POST["contrasenya"] ?? "");
-        $name = trim($_POST["nombre"] ?? "");
-        $phone = trim($_POST["telefono"] ?? "");
+        $password = trim($_POST["password"] ?? "");
+        $name = trim($_POST["name"] ?? "");
+        $phone = trim($_POST["phone"] ?? "");
 
         // Validate email
         if ($email === "") {
@@ -41,39 +43,39 @@
 
         // Check if email already exists
         if (empty($errorMessages)) {
-            $check = $con->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email");
-            $check->execute([":email" => $email]);
-            if ($check->fetchColumn() > 0) {
+            $checkStmt = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email");
+            $checkStmt->execute([":email" => $email]);
+            
+            if ($checkStmt->fetchColumn() > 0) {
                 $errorMessages[] = "El email ya está registrado, use otro.";
             }
         }
 
         // Insert new user if no errors
         if (empty($errorMessages)) {
-            $stmt = $con->prepare("INSERT INTO usuarios (nombre, email, contrasenya, telefono) 
-                                   VALUES (:nombre, :email, :contrasenya, :telefono)");
+            $stmt = $db->prepare("INSERT INTO usuarios (nombre, email, contrasenya, telefono, rol, estado) 
+                                  VALUES (:name, :email, :password, :phone, 'usuario', 'activo')");
             $stmt->execute([
-                ":nombre" => $name,
+                ":name" => $name,
                 ":email" => $email,
-                ":contrasenya" => password_hash($password, PASSWORD_DEFAULT),
-                ":telefono" => $phone,
+                ":password" => password_hash($password, PASSWORD_DEFAULT),
+                ":phone" => $phone
             ]);
 
             if ($stmt->rowCount() > 0) {
-                if (isset($_SESSION["rol"]) && $_SESSION["rol"] === "administrador") {
-                    header("Location: usuarioConsulta.php?nombreN=" . urlencode($name) . "&emailN=" . urlencode($email));
+                if (isset($_SESSION["role"]) && $_SESSION["role"] === "admin") {
+                    header("Location: /users/user_list.php?created_name=" . urlencode($name) . "&created_email=" . urlencode($email));
                     exit;
                 }
 
-                // If you are a regular user registering, you will be logged in automatically
-                $idNewUser = $con->lastInsertId();
+                $newUserId = $db->lastInsertId();
 
-                $_SESSION["id"] = $idNewUser;
+                $_SESSION["id"] = $newUserId;
                 $_SESSION["email"] = $email;
-                $_SESSION["rol"] = "usuario";
-                $_SESSION["nombre"] = $nombre;
+                $_SESSION["role"] = "user";
+                $_SESSION["name"] = $name;
 
-                header("Location: ../index.php?nombreN=" . urlencode($nombre) . "&emailN=" . urlencode($email));
+                header("Location: /index.php?new_name=" . urlencode($name) . "&new_email=" . urlencode($email));
                 exit;
             } else {
                 $errorMessages[] = "Ha ocurrido un error con la base de datos";
@@ -91,8 +93,8 @@
     <title>Nuevo usuario</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
     <div class="d-flex justify-content-center align-items-center onix-bg">
@@ -109,9 +111,9 @@
             </div>
 
             <!-- Client-side errors -->
-            <div id="errores" class="mb-3 text-danger fw-semibold"></div>
+            <div id="errors" class="mb-3 text-danger fw-semibold"></div>
             
-            <form name="fCreacion" id="fCreacion" method="post" action="usuarioCrear.php">
+            <form name="register_form" id="register_form" method="post" action="/users/user_create.php">
                 <p class="mb-3 text-center fw-semibold">Rellena los siguientes datos para crear un nuevo usuario.</p>
 
                 <div class="mb-3">
@@ -120,31 +122,30 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="contrasenya" class="form-label">Contraseña</label>
-                    <input type="password" class="form-control onix-input" name="contrasenya" id="contrasenya" maxlength="30">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input type="password" class="form-control onix-input" name="password" id="password" maxlength="30">
                 </div>
 
                 <div class="mb-3">
-                    <label for="nombre" class="form-label">Nombre</label>
-                    <input type="text" class="form-control onix-input" name="nombre" id="nombre" value="<?= isset($_POST['nombre']) ? htmlspecialchars($_POST['nombre']) : '' ?>">
+                    <label for="name" class="form-label">Nombre</label>
+                    <input type="text" class="form-control onix-input" name="name" id="name" value="<?= isset($_POST['name']) ? htmlspecialchars($_POST['name']) : '' ?>">
                 </div>
 
                 <div class="mb-3">
-                    <label for="telefono" class="form-label">Teléfono</label>
-                    <input type="text" class="form-control onix-input" name="telefono" id="telefono" maxlength="9" value="<?= isset($_POST['telefono']) ? htmlspecialchars($_POST['telefono']) : '' ?>">
+                    <label for="phone" class="form-label">Teléfono</label>
+                    <input type="text" class="form-control onix-input" name="phone" id="phone" maxlength="9" value="<?= isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : '' ?>">
                 </div>
 
                 <div class="d-grid gap-3">
-                    <button type="submit" class="btn fw-semibold btn-onix" name="enviar">Crear usuario</button>
+                    <button type="submit" class="btn fw-semibold btn-onix" name="register_submit">Crear usuario</button>
                     <hr class="onix-divider">
-                    <a href="<?= (isset($_SESSION['rol']) && $_SESSION['rol'] === 'administrador') ? 'usuarioConsulta.php' : 'login.php' ?>" 
+                    <a href="<?= (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') ? '/users/user_list.php' : '/users/login.php' ?>" 
                        class="btn btn-outline-secondary">Volver</a>
                 </div>
             </form>
         </div>
     </div>
-    <script src="usuariosValidacionForm.js"></script>
+    <script src="/users/users_validation_form.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
