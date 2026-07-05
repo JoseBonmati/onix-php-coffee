@@ -77,6 +77,7 @@
 
             // Direct OOP Mapping
             $stmt->setFetchMode(PDO::FETCH_CLASS, "User");
+
             return $stmt->fetchAll();
         }
     }

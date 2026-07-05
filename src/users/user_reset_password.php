@@ -1,13 +1,17 @@
 <?php
-    require_once "../utilidades/conectar_db.php";
-    $con = conectar();
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
     
-    // Store error messages
     $errorMessages = [];
 
-    if (isset($_POST["enviar"])) {
+    if (isset($_POST["reset_submit"])) {
         $email = trim($_POST["email"] ?? "");
-        $password = trim($_POST["contrasenya"] ?? "");
+        $password = trim($_POST["password"] ?? "");
 
         // Validate email
         if ($email === "") {
@@ -25,24 +29,24 @@
 
         // Process reset if no errors
         if (empty($errorMessages)) {
-            $stmt = $con->prepare("SELECT nombre, estado FROM usuarios WHERE email = :email");
+            $stmt = $db->prepare("SELECT nombre AS name, estado AS status FROM usuarios WHERE email = :email");
             $stmt->execute([":email" => $email]);
 
-            if ($data = $stmt->fetch()) {
-                if ($data["estado"] !== "activo") {
+            if ($user = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if ($user["status"] !== "activo") {
                     $errorMessages[] = "El usuario está inactivo. Contacte con el administrador.";
                 } else {
-                    $name = $data["nombre"];
+                    $name = $user["name"];
                     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-                    $query = $con->prepare("UPDATE usuarios SET contrasenya = :contrasenya WHERE email = :email");
-                    $query->execute([
-                        ":contrasenya" => $passwordHash,
+                    $updateStmt = $db->prepare("UPDATE usuarios SET contrasenya = :password WHERE email = :email");
+                    $updateStmt->execute([
+                        ":password" => $passwordHash,
                         ":email" => $email
                     ]);
 
-                    if ($query->rowCount() > 0) {
-                        header("Location: login.php?nombreR=" . urlencode($name));
+                    if ($updateStmt->rowCount() >= 0) {
+                        header("Location: /users/login.php?reset_name=" . urlencode($name));
                         exit;
                     } else {
                         $errorMessages[] = "No se ha podido actualizar la contraseña. Inténtelo de nuevo.";
@@ -53,6 +57,7 @@
             }
         }
     }
+
 ?>
 
 <!DOCTYPE html>
@@ -63,13 +68,14 @@
     <title>Restablecer contraseña</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
     <div class="d-flex justify-content-center align-items-center onix-bg">
         <div class="p-4 onix-card">
             <h2 class="text-center mb-4 fw-bold">Restablecer contraseña</h2>
+            
             <div class="mb-3">
                 <?php
                     if (!empty($errorMessages)) {
@@ -79,30 +85,31 @@
             </div>
 
             <!-- Client errors -->
-            <div id="errores" class="mb-3 text-danger fw-semibold"></div>
+            <div id="errors" class="mb-3 text-danger fw-semibold"></div>
             
-            <form name="fRestablecimiento" id="fRestablecimiento" method="post" action="restablecerContrasenya.php">
+            <form name="reset_form" id="reset_form" method="post" action="/users/user_reset_password.php">
                 <p class="mb-3 text-center fw-semibold">Introduce tu correo electrónico y la nueva contraseña que deseas establecer.</p>
 
                 <div class="mb-3">
                     <label for="email" class="form-label">Correo electrónico</label>
-                    <input type="text" class="form-control onix-input" name="email" id="email" maxlength="50" value="<?php if(isset($_POST['email'])) echo htmlspecialchars($_POST['email']); ?>">
+                    <input type="text" class="form-control onix-input" name="email" id="email" maxlength="50" value="<?= isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '' ?>">
                 </div>
 
                 <div class="mb-3">
-                    <label for="contrasenya" class="form-label">Nueva contraseña</label>
-                    <input type="password" class="form-control onix-input" name="contrasenya" id="contrasenya" maxlength="30">
+                    <label for="password" class="form-label">Nueva contraseña</label>
+                    <input type="password" class="form-control onix-input" name="password" id="password" maxlength="30">
                 </div>
 
                 <div class="d-grid gap-3">
-                    <button type="submit" class="btn fw-semibold btn-onix" name="enviar">Restablecer contraseña</button>
+                    <button type="submit" class="btn fw-semibold btn-onix" name="reset_submit">Restablecer contraseña</button>
                     <hr class="onix-divider">
-                    <a href="login.php" class="btn btn-outline-secondary">Volver</a>
+                    <a href="/users/login.php" class="btn btn-outline-secondary">Volver</a>
                 </div>
             </form>
         </div>
     </div>
-    <script src="usuariosValidacionForm.js"></script>
+    
+    <script src="/users/users_validation_form.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
