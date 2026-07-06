@@ -1,50 +1,53 @@
 <?php
 
-    require_once "../utilidades/conectar_db.php";
-    $con = conectar();
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
 
     // Restrict access: only administrators can delete categories
-    if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "administrador") {
-        header("Location: login.php?acceso=denegado");
+    if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "admin") {
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    // Store error messages
+    // Array to store server validation error messages
     $errorMessages = [];
 
     $name = "";
     $id = null;
 
-    // Retrieve category data by ID
+    // Fetch category data by ID for confirmation details
     if (isset($_GET["id"])) {
         $id = (int) $_GET["id"];
 
-        $query = $con->prepare("SELECT nombre FROM categorias WHERE id = :id");
+        $query = $db->prepare("SELECT nombre AS name FROM categorias WHERE id = :id");
         $query->execute([":id" => $id]);
 
-        if ($data = $query->fetch()) {
-            $name = $data["nombre"];
+        if ($data = $query->fetch(PDO::FETCH_ASSOC)) {
+            $name = $data["name"];
         } else {
             $errorMessages[] = "No se ha encontrado la categoría con el ID proporcionado.";
         }
     }
 
-    // Handle deletion request
-    if (isset($_POST["eliminar"])) {
+    // Process operational deletion form submission
+    if (isset($_POST["delete_submit"])) {
         $id = (int) $_POST["id"];
 
-        $checkQuery = $con->prepare("SELECT nombre FROM categorias WHERE id = :id");
+        $checkQuery = $db->prepare("SELECT nombre AS name FROM categorias WHERE id = :id");
         $checkQuery->execute([":id" => $id]);
 
-        if ($data = $checkQuery->fetch()) {
-            $name = $data["nombre"];
+        if ($data = $checkQuery->fetch(PDO::FETCH_ASSOC)) {
+            $name = $data["name"];
 
-            $deleteQuery = $con->prepare("DELETE FROM categorias WHERE id = :id");
+            $deleteQuery = $db->prepare("DELETE FROM categorias WHERE id = :id");
             $deleteQuery->execute([":id" => $id]);
 
             if ($deleteQuery->rowCount() > 0) {
-                header("Location: categoriaConsulta.php?nameD=" . urlencode($nombre));
+                header("Location: /categories/category_list.php?deleted_category=" . urlencode($name));
                 exit;
             } else {
                 $errorMessages[] = "No se ha podido eliminar la categoría.";
@@ -64,8 +67,8 @@
     <title>Eliminar categoría</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
     <div class="d-flex justify-content-center align-items-start onix-bg">
@@ -87,15 +90,15 @@
                     <span class="text-onix fw-bold"><?= htmlspecialchars($name) ?></span>?
                 </p>
 
-                <form name="fBorrado" id="fBorrado" method="post" action="categoriaEliminar.php">
-                    <input type="hidden" name="id" value="<?= htmlspecialchars($id) ?>">
+                <form name="delete_form" id="delete_form" method="post" action="/categories/category_delete.php">
+                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$id) ?>">
 
                     <div class="d-grid gap-3">
-                        <button type="submit" name="eliminar" class="btn btn-danger fw-semibold" onclick="return confirm('¿Seguro que deseas eliminar esta categoria?');">
+                        <button type="submit" name="delete_submit" class="btn btn-danger fw-semibold" onclick="return confirm('¿Seguro que deseas eliminar esta categoría?');">
                             Eliminar categoría
                         </button>
                         <hr class="onix-divider">
-                        <a href="categoriaConsulta.php" class="btn btn-outline-secondary fw-semibold" >Volver</a>
+                        <a href="/categories/category_list.php" class="btn btn-outline-secondary fw-semibold">Volver</a>
                     </div>
                 </form>
             <?php endif; ?>

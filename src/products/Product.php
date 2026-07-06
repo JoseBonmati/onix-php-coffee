@@ -1,63 +1,89 @@
 <?php
 
-    // Product entity class
+    require_once __DIR__ . '/../utils/Database.php';
+
+    // Product Entity Class
     class Product {
 
-        private $id;
-        private $name;
-        private $description;
-        private $price;
-        private $categoryName;
-        private $image;
-        private $status;
+        // Properties matching the translated database aliases with strict typing
+        private ?int $id = null;
+        private ?int $category_id = null;
+        private ?string $name = null;
+        private ?string $description = null;
+        private ?float $price = null;
+        private ?string $image = null;
+        private ?string $status = null;
+        private ?string $category_name = null;
 
-        public function getId() {
+        // Getters with strict typing
+        public function getId(): ?int {
             return $this->id;
         }
 
-        public function getNombre() {
+        public function getCategoryId(): ?int {
+            return $this->category_id;
+        }
+
+        public function getName(): ?string {
             return $this->name;
         }
 
-        public function getDescripcion() {
+        public function getDescription(): ?string {
             return $this->description;
         }
 
-        public function getPrecio() {
+        public function getPrice(): ?float {
             return $this->price;
         }
 
-        public function getCategoriaNombre() {
-            return $this->categoryName;
-        }
-
-        public function getImagen() {
+        public function getImage(): ?string {
             return $this->image;
         }
 
-        public function getEstado() {
+        public function getStatus(): ?string {
             return $this->status;
         }
-    }
 
-    // Retrieve products with pagination and sorting
-    function obtenerProductos($con, $page, $resultsPP, $order, $orderType) {
+        public function getCategoryName(): ?string {
+            return $this->category_name;
+        }
 
-        $start = ($page - 1) * $resultsPP;
 
-        $allowedColumns = ["p.id","p.nombre","p.descripcion","p.precio","c.nombre"];
-        if (!in_array($order, $allowedColumns)) $order = "p.id";
-        $orderType = strtoupper($orderType) === "DESC" ? "DESC" : "ASC";
+        //Fetches products with pagination, sorting, and automatic mapping to the Product class.
+        public static function getProducts(int $page, int $perPage, string $sortBy, string $sortDir): array {
+            
+            $db = Database::getConnection();
+            $offset = ($page - 1) * $perPage;
 
-        $query = $con->prepare("SELECT p.id, p.nombre AS name, p.descripcion AS description, p.precio AS price, c.nombre AS categoryName, p.imagen AS image, p.estado AS status
-                                FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id ORDER BY $order $orderType LIMIT :inicio, :resultados");
-        $query->bindParam(":inicio", $start, PDO::PARAM_INT);
-        $query->bindParam(":resultados", $resultsPP, PDO::PARAM_INT);
-        $query->execute();
+            // White-list mapping parameter keys to avoid SQL Injection via ORDER BY
+            $allowedColumns = [
+                "id" => "p.id",
+                "name" => "p.nombre",
+                "description" => "p.descripcion",
+                "price" => "p.precio",
+                "category_name" => "c.nombre"
+            ];
+            
+            // Fallback to safe defaults if parameters are invalid
+            $orderField = $allowedColumns[$sortBy] ?? "p.id";
+            $sortDir = strtoupper($sortDir) === "DESC" ? "DESC" : "ASC";
 
-        // Map results to Product class
-        $query->setFetchMode(PDO::FETCH_CLASS, "Product");
-        return $query->fetchAll();
+            // Clean SQL query with aliases to hydrate the Product class seamlessly
+            $sql = "SELECT p.id, p.id_categoria AS category_id, p.nombre AS name, p.descripcion AS description, p.precio AS price, p.imagen AS image, p.estado AS status, 
+                    c.nombre AS category_name FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id ORDER BY $orderField $sortDir LIMIT :offset, :limit";
+
+            $stmt = $db->prepare($sql);
+
+            // Bind variables to ensure correct integer hydration for limits
+            $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
+            $stmt->bindValue(":limit", $perPage, PDO::PARAM_INT);
+            $stmt->execute();
+
+            // Direct OOP Mapping
+            $stmt->setFetchMode(PDO::FETCH_CLASS, "Product");
+            
+            return $stmt->fetchAll();
+        }
     }
 
 ?>

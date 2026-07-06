@@ -1,13 +1,16 @@
 <?php
 
-    require_once "../utilidades/conectar_db.php";
-    require_once "Product.php";
-    $con = conectar();
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    // Restrict access: only administrators
-    if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "administrador") {
-        header("Location: login.php?acceso=denegado");
+    require_once __DIR__ . "/../utils/Database.php";
+    require_once __DIR__ . "/Product.php";
+    $db = Database::getConnection();
+
+    // Restrict access: only administrators can view this page
+    if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "admin") {
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
@@ -21,8 +24,8 @@
     <title>Consulta de productos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
     <div class="onix-bg d-flex justify-content-center align-items-start py-5">
@@ -32,28 +35,26 @@
             <!-- Success messages -->
             <div class="mb-3">
                 <?php
-
-                    if (isset($_GET["nameE"])) {
-                        $nameE = htmlspecialchars($_GET["nameE"]);
-                        echo "<p class='alert alert-success'>El producto <b>$nameE</b> ha sido modificado correctamente.</p>";
+                    if (isset($_GET["updated_product"])) {
+                        $updatedProduct = htmlspecialchars($_GET["updated_product"]);
+                        echo "<p class='alert alert-success'>El producto <b>$updatedProduct</b> ha sido modificado correctamente.</p>";
                     }
-                    if (isset($_GET["nameN"])) {
-                        $nameN = htmlspecialchars($_GET["nameN"]);
-                        echo "<p class='alert alert-success'>El producto <b>$nameN</b> se ha creado correctamente.</p>";
+                    if (isset($_GET["created_product"])) {
+                        $createdProduct = htmlspecialchars($_GET["created_product"]);
+                        echo "<p class='alert alert-success'>El producto <b>$createdProduct</b> se ha creado correctamente.</p>";
                     }
-                    if (isset($_GET["nameD"])) {
-                        $nameD = htmlspecialchars($_GET["nameD"]);
-                        echo "<p class='alert alert-success'>El producto <b>$nameD</b> se ha eliminado correctamente.</p>";
+                    if (isset($_GET["deleted_product"])) {
+                        $deletedProduct = htmlspecialchars($_GET["deleted_product"]);
+                        echo "<p class='alert alert-success'>El producto <b>$deletedProduct</b> se ha eliminado correctamente.</p>";
                     }
-
                 ?>
             </div>
 
             <!-- Search bar -->
-            <form method="get" action="productoConsulta.php" class="mb-4 onix-search mx-auto">
+            <form method="get" action="/products/product_list.php" class="mb-4 onix-search mx-auto">
                 <div class="input-group">
-                    <input type="text" name="buscar" class="form-control" placeholder="Buscar por nombre o categoria" autocomplete="off"
-                           value="<?= isset($_GET['buscar']) ? htmlspecialchars($_GET['buscar']) : '' ?>">
+                    <input type="text" name="search" class="form-control" placeholder="Buscar por nombre o categoría" autocomplete="off"
+                           value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
                     <button class="btn btn-onix fw-semibold" type="submit">Buscar</button>
                 </div>
             </form>
@@ -62,37 +63,46 @@
 
                 // Pagination and sorting setup
                 $page = isset($_GET["page"]) ? (int)$_GET["page"] : 1;
-                $resultsPP = 5;
+                $perPage = 5;
 
-                $allowedColumns = ["p.id", "p.nombre", "p.descripcion", "p.precio", "c.nombre", "p.estado"];
-                $order = $_GET["order"] ?? "p.nombre";
-                if (!in_array($order, $allowedColumns)) $order = "p.nombre";
+                // White-list mapping for safe sorting
+                $allowedColumns = [
+                    "id" => "p.id",
+                    "name" => "p.nombre",
+                    "description" => "p.descripcion",
+                    "price" => "p.precio",
+                    "category_name" => "c.nombre",
+                    "status" => "p.estado"
+                ];
 
-                $orderType = strtoupper($_GET["orderType"] ?? "ASC");
-                if (!in_array($orderType, ["ASC", "DESC"])) $orderType = "ASC";
+                $sortBy = $_GET["sort_by"] ?? "name";
+                $orderField = $allowedColumns[$sortBy] ?? "p.nombre";
 
-                // If there is a search, we apply filter + order + pagination
-                if (isset($_GET["buscar"]) && trim($_GET["buscar"]) !== "") {
+                $sortDir = strtoupper($_GET["sort_dir"] ?? "ASC");
+                if (!in_array($sortDir, ["ASC", "DESC"])) $sortDir = "ASC";
 
-                    $busqueda = "%" . trim($_GET["buscar"]) . "%";
+                // If search filter is active, apply filter + sort + pagination
+                if (isset($_GET["search"]) && trim($_GET["search"]) !== "") {
+
+                    $searchTerm = "%" . trim($_GET["search"]) . "%";
 
                     // Count filtered results
-                    $countQuery = $con->prepare("SELECT COUNT(*) AS total FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id 
-                                                 WHERE (p.nombre LIKE :busqueda OR c.nombre LIKE :busqueda)");
-                    $countQuery->execute([":busqueda" => $busqueda]);
-                    $totalProducts = $countQuery->fetch()["total"];
+                    $countQuery = $db->prepare("SELECT COUNT(*) AS total FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id 
+                                                WHERE (p.nombre LIKE :search OR c.nombre LIKE :search)");
+                    $countQuery->execute([":search" => $searchTerm]);
+                    $totalProducts = $countQuery->fetch(PDO::FETCH_ASSOC)["total"];
 
-                    $totalPages = ceil($totalProducts / $resultsPP);
-                    $start = ($page - 1) * $resultsPP;
+                    $totalPages = ceil($totalProducts / $perPage);
+                    $offset = ($page - 1) * $perPage;
 
-                    // Obtain filtered results with pagination and sorting
-                    $query = $con->prepare("SELECT p.id, p.nombre AS name, p.descripcion AS description, p.precio AS price, c.nombre AS categoryName, p.imagen AS image, p.estado AS status 
-                                            FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id WHERE (p.nombre LIKE :busqueda OR c.nombre LIKE :busqueda)
-                                            ORDER BY $order $orderType LIMIT :inicio, :resultados");
+                    // Obtain filtered results with precise class properties mapping
+                    $query = $db->prepare("SELECT p.id, p.id_categoria AS category_id, p.nombre AS name, p.descripcion AS description, p.precio AS price, p.imagen AS image, 
+                                           p.estado AS status, c.nombre AS category_name FROM productos p INNER JOIN categorias c ON p.id_categoria = c.id 
+                                           WHERE (p.nombre LIKE :search OR c.nombre LIKE :search) ORDER BY $orderField $sortDir LIMIT :offset, :limit");
 
-                    $query->bindValue(":busqueda", $busqueda, PDO::PARAM_STR);
-                    $query->bindValue(":inicio", $start, PDO::PARAM_INT);
-                    $query->bindValue(":resultados", $resultsPP, PDO::PARAM_INT);
+                    $query->bindValue(":search", $searchTerm, PDO::PARAM_STR);
+                    $query->bindValue(":offset", $offset, PDO::PARAM_INT);
+                    $query->bindValue(":limit", $perPage, PDO::PARAM_INT);
                     $query->execute();
 
                     $query->setFetchMode(PDO::FETCH_CLASS, "Product");
@@ -100,29 +110,27 @@
 
                 } else {
 
-                    // Query categories normally
-                    $products = obtenerProductos($con, $page, $resultsPP, $order, $orderType);
+                    // Query products standard structure using class method
+                    $products = Product::getProducts($page, $perPage, $sortBy, $sortDir);
 
-                    $query = $con->prepare("SELECT count(*) AS total FROM productos");
-                    $query->execute();
-                    $totalProducts = $query->fetch()["total"];
+                    $query = $db->query("SELECT count(*) AS total FROM productos");
+                    $totalProducts = $query->fetch(PDO::FETCH_ASSOC)["total"];
 
-                    $totalPages = ceil($totalProducts / $resultsPP);
+                    $totalPages = ceil($totalProducts / $perPage);
                 }
 
-                // Sorting icons
-                function iconoOrden($col, $order, $orderType) {
-                    if ($col !== $order) return '<i class="bi bi-arrow-down-up"></i>';
-                    return $orderType === "ASC"
-                        ? '<i class="bi bi-arrow-up"></i>'
-                        : '<i class="bi bi-arrow-down"></i>';
+                // Sorting icons helper
+                function sortIcon(string $col, string $currentSortBy, string $currentSortDir): string {
+                    if ($col !== $currentSortBy) return '<i class="bi bi-arrow-down-up"></i>';
+                    return $currentSortDir === "ASC" ? '<i class="bi bi-arrow-up"></i>' : '<i class="bi bi-arrow-down"></i>';
                 }
 
-                function urlOrden($col, $orderType) {
-                    $newType = $orderType === "ASC" ? "DESC" : "ASC";
-                    $url = "productoConsulta.php?order=$col&orderType=$newType";
-                    if (isset($_GET["buscar"])) {
-                        $url .= "&buscar=" . urlencode($_GET["buscar"]);
+                // Sorting URL builder
+                function sortUrl(string $col, string $currentSortDir): string {
+                    $newDir = $currentSortDir === "ASC" ? "DESC" : "ASC";
+                    $url = "/products/product_list.php?sort_by=$col&sort_dir=$newDir";
+                    if (isset($_GET["search"])) {
+                        $url .= "&search=" . urlencode($_GET["search"]);
                     }
                     return $url;
                 }
@@ -133,12 +141,12 @@
                 <table class="onix-table align-middle text-center mx-auto">
                     <thead>
                         <tr>
-                            <th><a href="<?= urlOrden('p.id', $orderType) ?>">ID <?= iconoOrden('p.id', $order, $orderType) ?></a></th>
-                            <th><a href="<?= urlOrden('p.nombre', $orderType) ?>">Nombre <?= iconoOrden('p.nombre', $order, $orderType) ?></a></th>
-                            <th><a href="<?= urlOrden('p.descripcion', $orderType) ?>">Descripción <?= iconoOrden('p.descripcion', $order, $orderType) ?></a></th>
-                            <th><a href="<?= urlOrden('p.precio', $orderType) ?>">Precio <?= iconoOrden('p.precio', $order, $orderType) ?></a></th>
-                            <th><a href="<?= urlOrden('c.nombre', $orderType) ?>">Categoría <?= iconoOrden('c.nombre', $order, $orderType) ?></a></th>
-                            <th><a href="<?= urlOrden('p.estado', $orderType) ?>">Estado <?= iconoOrden('p.estado', $order, $orderType) ?></a></th>
+                            <th><a href="<?= sortUrl('id', $sortDir) ?>">ID <?= sortIcon('id', $sortBy, $sortDir) ?></a></th>
+                            <th><a href="<?= sortUrl('name', $sortDir) ?>">Nombre <?= sortIcon('name', $sortBy, $sortDir) ?></a></th>
+                            <th><a href="<?= sortUrl('description', $sortDir) ?>">Descripción <?= sortIcon('description', $sortBy, $sortDir) ?></a></th>
+                            <th><a href="<?= sortUrl('price', $sortDir) ?>">Precio <?= sortIcon('price', $sortBy, $sortDir) ?></a></th>
+                            <th><a href="<?= sortUrl('category_name', $sortDir) ?>">Categoría <?= sortIcon('category_name', $sortBy, $sortDir) ?></a></th>
+                            <th><a href="<?= sortUrl('status', $sortDir) ?>">Estado <?= sortIcon('status', $sortBy, $sortDir) ?></a></th>
                             <th>Imagen</th>
                             <th>Editar</th>
                             <th>Borrar</th>
@@ -147,47 +155,41 @@
 
                     <tbody>
                         <?php
-
                             if (empty($products)) {
-                                echo "<tr><td colspan='9' class='text-center py-3 text-light'>
-                                          No se encontraron productos
-                                      </td></tr>";
+                                echo "<tr><td colspan='9' class='text-center py-3 text-light'>No se encontraron productos</td></tr>";
                             } else {
                                 foreach ($products as $product) {
                                     echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($product->getId()) . "</td>";
-                                    echo "<td>" . htmlspecialchars($product->getNombre()) . "</td>";
-                                    echo "<td>" . htmlspecialchars($product->getDescripcion()) . "</td>";
-                                    echo "<td>" . htmlspecialchars($product->getPrecio()) . " €</td>";
-                                    echo "<td>" . htmlspecialchars($product->getCategoriaNombre()) . "</td>";
-                                    echo "<td>" . htmlspecialchars($product->getEstado()) . "</td>";
-                                    echo "<td><img src='" . htmlspecialchars($product->getImagen()) . "' class='img-thumbnail' style='max-height: 120px;'></td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getId()) . "</td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getName()) . "</td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getDescription()) . "</td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getPrice()) . " €</td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getCategoryName()) . "</td>";
+                                    echo "<td>" . htmlspecialchars((string)$product->getStatus()) . "</td>";
+                                    echo "<td><img src='" . htmlspecialchars((string)$product->getImage()) . "' class='img-thumbnail' style='max-height: 120px;'></td>";
 
-                                    echo "<td><a class='text-onix fw-bold' href='productoEditar.php?id=" . $product->getId() . "'>
+                                    echo "<td><a class='text-onix fw-bold' href='/products/product_edit.php?id=" . $product->getId() . "'>
                                               <i class='bi bi-pencil-square'></i>
                                           </a></td>";
 
-                                    echo "<td><a class='text-danger fw-bold' href='productoEliminar.php?id=" . $product->getId() . "'>
+                                    echo "<td><a class='text-danger fw-bold' href='/products/product_delete.php?id=" . $product->getId() . "'>
                                               <i class='bi bi-trash-fill'></i>
                                           </a></td>";
-
                                     echo "</tr>";
                                 }
                             }
-
                         ?>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Pagination -->
+            <!-- Pagination buttons -->
             <div class="text-center mt-4">
                 <?php
-
                     for ($i = 1; $i <= $totalPages; $i++) {
-                        $url = "productoConsulta.php?page=$i&order=$order&orderType=$orderType";
-                        if (isset($_GET["buscar"])) {
-                            $url .= "&buscar=" . urlencode($_GET["buscar"]);
+                        $url = "/products/product_list.php?page=$i&sort_by=$sortBy&sort_dir=$sortDir";
+                        if (isset($_GET["search"])) {
+                            $url .= "&search=" . urlencode($_GET["search"]);
                         }
 
                         if ($i == $page) {
@@ -196,16 +198,15 @@
                             echo "<a href='$url' class='btn btn-outline-onix mx-1'>$i</a>";
                         }
                     }
-
                 ?>
             </div>
 
             <div class="text-center mt-4 d-flex justify-content-center">
-                <a href="productoCrear.php" class="btn btn-onix">Nuevo producto</a>
+                <a href="/products/product_create.php" class="btn btn-onix">Nuevo producto</a>
             </div>
 
             <div class="text-center text-lg-start mt-3">
-                <a href="../utilidades/panelAdministrador.php" class="btn btn-outline-secondary">Volver</a>
+                <a href="/utils/admin_panel.php" class="btn btn-outline-secondary">Volver</a>
             </div>
         </div>
     </div>

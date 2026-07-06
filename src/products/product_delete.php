@@ -1,62 +1,72 @@
 <?php
 
-    require_once "../utilidades/conectar_db.php";
-    $con = conectar();
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
 
     // Restrict access: only administrators can delete products
-    if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "administrador") {
-        header("Location: login.php?acceso=denegado");
+    if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "admin") {
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    // Store error messages
+    // Array to store server validation error messages
     $errorMessages = [];
 
     $name = "";
     $image = "";
     $id = null;
 
-    // Retrieve product data by ID
+    // Fetch product data for display
     if (isset($_GET["id"])) {
         $id = (int) $_GET["id"];
 
-        $query = $con->prepare("SELECT nombre, imagen FROM productos WHERE id = :id");
+        // Use aliases to map properties consistently
+        $query = $db->prepare("SELECT nombre AS name, imagen AS image FROM productos WHERE id = :id");
         $query->execute([":id" => $id]);
 
-        if ($data = $query->fetch()) {
-            $name = $data["nombre"];
-            $image = $data["imagen"];
+        if ($data = $query->fetch(PDO::FETCH_ASSOC)) {
+            $name = $data["name"];
+            $image = $data["image"];
         } else {
             $errorMessages[] = "No se ha encontrado el producto con el ID proporcionado.";
         }
     }
 
-    // Handle deletion request
-    if (isset($_POST["eliminar"])) {
+    // Process actual deletion operation
+    if (isset($_POST["delete_submit"])) {
         $id = (int) $_POST["id"];
 
-        $checkQuery = $con->prepare("SELECT nombre, imagen FROM productos WHERE id = :id");
-        $checkQuery->execute([":id" => $id]);
+        $checkStmt = $db->prepare("SELECT nombre AS name, imagen AS image FROM productos WHERE id = :id");
+        $checkStmt->execute([":id" => $id]);
 
-        if ($data = $checkQuery->fetch()) {
-            $name = $data["nombre"];
-            $image = $data["imagen"];
+        if ($data = $checkStmt->fetch(PDO::FETCH_ASSOC)) {
+            $name = $data["name"];
+            $image = $data["image"];
 
-            // Delete image file if exists
-            if (!empty($image) && file_exists($image)) {
-                unlink($image);
+            // Calculate absolute server path to safely remove the file from the filesystem
+            if (!empty($image)) {
+                $serverPath = __DIR__ . "/../" . $image;
+                if (file_exists($serverPath) && is_file($serverPath)) {
+                    unlink($serverPath);
+                }
             }
 
-            $deleteQuery = $con->prepare("DELETE FROM productos WHERE id = :id");
-            $deleteQuery->execute([":id" => $id]);
+            // Remove product record from database
+            $deleteStmt = $db->prepare("DELETE FROM productos WHERE id = :id");
+            $deleteStmt->execute([":id" => $id]);
 
-            if ($deleteQuery->rowCount() > 0) {
-                header("Location: productoConsulta.php?nameD=" . urlencode($name));
+            if ($deleteStmt->rowCount() > 0) {
+                // Redirect to product list with query param
+                header("Location: /products/product_list.php?deleted_product=" . urlencode($name));
                 exit;
             } else {
                 $errorMessages[] = "No se ha podido eliminar el producto.";
             }
+
         } else {
             $errorMessages[] = "El producto indicado no existe.";
         }
@@ -72,20 +82,20 @@
     <title>Eliminar producto</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
-    <div class="d-flex justify-content-center align-items-start onix-bg">
+    <div class="d-flex justify-content-center align-items-start onix-bg py-5">
         <div class="p-4 onix-card" style="max-width: 600px;">
             <h2 class="text-center mb-4 fw-bold">Eliminar producto</h2>
 
-            <!-- Error messages -->
+            <!-- Errors -->
             <div class="mb-3">
-                <?php
+                <?php 
                     if (!empty($errorMessages)) {
                         echo "<p class='alert alert-danger mb-0'>" . implode("<br>", $errorMessages) . "</p>";
-                    }
+                    } 
                 ?>
             </div>
 
@@ -97,19 +107,19 @@
 
                 <?php if (!empty($image)): ?>
                     <div class="text-center mb-3">
-                        <img src="<?= htmlspecialchars($image) ?>" class="img-thumbnail" style="max-height: 150px;">
+                        <img src="/<?= htmlspecialchars($image) ?>" class="img-thumbnail" style="max-height: 150px;" alt="Product preview">
                     </div>
                 <?php endif; ?>
 
-                <form name="fBorrado" id="fBorrado" method="post" action="productoEliminar.php">
-                    <input type="hidden" name="id" value="<?= htmlspecialchars($id) ?>">
+                <form name="delete_form" id="delete_form" method="post" action="/products/product_delete.php">
+                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$id) ?>">
 
                     <div class="d-grid gap-3">
-                        <button type="submit" name="eliminar" class="btn btn-danger fw-semibold" onclick="return confirm('¿Seguro que deseas eliminar este producto?');">
+                        <button type="submit" name="delete_submit" class="btn btn-danger fw-semibold" onclick="return confirm('¿Seguro que deseas eliminar este producto?');">
                             Eliminar producto
                         </button>
                         <hr class="onix-divider">
-                        <a href="productoConsulta.php" class="btn btn-outline-secondary fw-semibold">Volver</a>
+                        <a href="/products/product_list.php" class="btn btn-outline-secondary fw-semibold">Volver</a>
                     </div>
                 </form>
             <?php endif; ?>

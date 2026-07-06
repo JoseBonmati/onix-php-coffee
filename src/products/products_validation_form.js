@@ -1,72 +1,86 @@
-const form = document.querySelector("form"); // Works only if there is a single form
-const nameField = document.getElementById("nombre");
-const description = document.getElementById("descripcion");
-const price = document.getElementById("precio");
-const category = document.getElementById("categoriaId");
-const image = document.getElementById("imagen");
-const errors = document.getElementById("errores");
+document.addEventListener("DOMContentLoaded", () => {
+    
+    const form = document.querySelector("form"); // Works only if there is a single form
+    const nameField = document.getElementById("name");
+    const descriptionField = document.getElementById("description");
+    const priceField = document.getElementById("price");
+    const categoryField = document.getElementById("category_id");
+    const imageField = document.getElementById("image");
+    const errorsContainer = document.getElementById("errors");
 
-function validacion() {
+    // Exit if there is no form on the current page to prevent console errors
+    if (!form) return;
 
-    // Store error messages
-    let errorMessages = [];
+    function validate() {
 
-    /*
-        General explanation of regular expressions:
-        ^       → start of the string
-        $       → end of the string
-    */
-    const regExp_whitespace = /^\s+$/;
+        // Store error messages
+        let errorMessages = [];
 
-    /* 
-        Validates a positive integer or decimal number:
-        ^          → start of the string
-        [0-9]*     → zero or more digits (integer part, optional)
-        \.?        → optional dot (decimal separator)
-        [0-9]+     → one or more digits (mandatory if decimal point is present)
-        $          → end of the string
-    */
-    const regExp_price = /^[0-9]*\.?[0-9]+$/;
+        /*
+            General explanation of regular expressions:
+            ^       → start of the string
+            $       → end of the string
+        */
+        const whitespaceRegex = /^\s+$/;
 
-    // Generic field validation function
-    function validateField(field, regex, mandatoryMessage, formatMessage) {
-        if (field) {
-            let value = field.value;
-            if (value == null || value.length === 0 || regExp_whitespace.test(value)) {
-                errorMessages.push(mandatoryMessage);
-            } else if (regex && !(regex.test(value))) {
-                errorMessages.push(formatMessage);
+        /* 
+            Validates a positive integer or decimal number:
+            ^          → start of the string
+            [0-9]*     → zero or more digits (integer part, optional)
+            \.?        → optional dot (decimal separator)
+            [0-9]+     → one or more digits (mandatory if decimal point is present)
+            $          → end of the string
+        */
+        const priceRegex = /^[0-9]*\.?[0-9]+$/;
+
+        // Generic field validation function
+        function validateField(field, regex, mandatoryMessage, formatMessage) {
+            if (field) {
+                let value = field.value.trim(); 
+                
+                if (!value || value.length === 0 || whitespaceRegex.test(value)) {
+                    errorMessages.push(mandatoryMessage);
+                } else if (regex && !(regex.test(value))) {
+                    errorMessages.push(formatMessage);
+                }
             }
         }
+
+        // Validate each field
+        validateField(nameField, null, "El campo Nombre es obligatorio.");
+        validateField(descriptionField, null, "El campo Descripción es obligatorio.");
+        validateField(priceField, priceRegex, "El campo Precio es obligatorio.", "El precio debe ser un número válido.");
+
+        // Validate category (select)
+        if (categoryField && categoryField.value === "") {
+            errorMessages.push("Debe seleccionar una categoría.");
+        }
+
+        // Validate image (file)
+        if (imageField && imageField.value === "") {
+            errorMessages.push("Debe subir una imagen.");
+        }
+
+        // Show errors if any
+        if (errorMessages.length > 0) {
+            if (errorsContainer) {
+                errorsContainer.innerHTML = errorMessages.join("<br>");
+            }
+            return false;
+        }
+
+        // Clear errors if validation passes
+        if (errorsContainer) {
+            errorsContainer.innerHTML = "";
+        }
+        
+        return true;
     }
 
-    // Validate each field
-    validateField(nameField, null, "El campo Nombre es obligatorio.");
-    validateField(description, null, "El campo Descripción es obligatorio.");
-    validateField(price, regExp_price, "El campo Precio es obligatorio.", "El precio debe ser un número válido.");
-
-    // Validate category (select)
-    if (category && category.value === "") {
-        errorMessages.push("Debe seleccionar una categoría.");
-    }
-
-    // Validate image (file)
-    if (image && image.value === "") {
-        errorMessages.push("Debe subir una imagen.");
-    }
-
-    // Show errors if any
-    if (errorMessages.length > 0) {
-        errors.innerHTML = errorMessages.join("<br>");
-        return false;
-    }
-
-    return true;
-}
-
-// Prevent form submission if validation fails
-form.addEventListener("submit", function (event) {
-    if (!validacion()) {
-        event.preventDefault();
-    }
+    // Prevent form submission if validation fails
+    form.addEventListener("submit", function (event) {
+        if (!validate()) {
+            event.preventDefault();
+        }
+    });
 });

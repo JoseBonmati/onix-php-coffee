@@ -1,113 +1,125 @@
 <?php 
 
-    require_once "../utilidades/conectar_db.php";
-    $con = conectar();
-    session_start();
+    // Session Management
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    // Restrict access: only administrators
-    if (!isset($_SESSION["rol"]) || $_SESSION["rol"] !== "administrador") {
-        header("Location: login.php?acceso=denegado");
+    // Database Connection
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
+
+    // Restrict access: only administrators can create products
+    if (!isset($_SESSION["role"]) || $_SESSION["role"] !== "admin") {
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    // Store error messages
+    // Array to store server validation error messages
     $errorMessages = [];
 
-    if (isset($_POST["enviar"])) {
-        $name = trim($_POST["nombre"] ?? "");
-        $description = trim($_POST["descripcion"] ?? "");
-        $price = trim($_POST["precio"] ?? "");
-        $categoryId = trim($_POST["categoriaId"] ?? "");
+    // Process form submission
+    if (isset($_POST["create_submit"])) {
+        $name = trim($_POST["name"] ?? "");
+        $description = trim($_POST["description"] ?? "");
+        $price = trim($_POST["price"] ?? "");
+        $categoryId = trim($_POST["category_id"] ?? "");
 
-        // Validations
-        if ($name === "") {
-            $errorMessages[] = "El campo Nombre no puede estar vacío.";
-        }
-
-        if ($description === "") {
-            $errorMessages[] = "El campo Descripción no puede estar vacío.";
-        }
+        // Input Validations
+        if ($name === "") $errorMessages[] = "El campo Nombre no puede estar vacío.";
+        if ($description === "") $errorMessages[] = "El campo Descripción no puede estar vacío.";
 
         if ($price === "") {
             $errorMessages[] = "El campo Precio no puede estar vacío.";
         } elseif (!preg_match("/^[0-9]*\.?[0-9]+$/", $price)) {
-            $errorMessages[] = "El formato del precio no es válido. Use números enteros o decimales.";
+            $errorMessages[] = "El formato del precio no es válido.";
         }
 
-        if ($categoryId === "") {
-            $errorMessages[] = "Debe seleccionar una categoría.";
-        }
+        if ($categoryId === "") $errorMessages[] = "Debe seleccionar una categoría.";
 
-        // Image validation
-        if (empty($_FILES["imagen"]["tmp_name"])) {
+        // Image upload validation
+        if (empty($_FILES["image"]["tmp_name"])) {
             $errorMessages[] = "Debe subir una imagen.";
         } else {
-            $file = $_FILES["imagen"];
-            $temp_name = $file["tmp_name"];
-            $real_name = $file["name"];
+            $file = $_FILES["image"];
+            $tempName = $file["tmp_name"];
+            $realName = $file["name"];
             $size = $file["size"];
 
-            $max_size = 2 * 1024 * 1024;
-            if ($size > $max_size) $errorMessages[] = "La imagen es demasiado grande (máx 2MB).";
+            $maxSize = 2 * 1024 * 1024;
+            if ($size > $maxSize) $errorMessages[] = "La imagen es demasiado grande (máx 2MB).";
 
-            $img_info = getimagesize($temp_name);
-            if (!$img_info) {
+            $imgInfo = getimagesize($tempName);
+            if (!$imgInfo) {
                 $errorMessages[] = "El archivo no es una imagen válida.";
             } else {
-                $width = $img_info[0];
-                $height = $img_info[1];
-                $ext = strtolower(pathinfo($real_name, PATHINFO_EXTENSION));
+                $width = $imgInfo[0];
+                $height = $imgInfo[1];
+                $ext = strtolower(pathinfo($realName, PATHINFO_EXTENSION));
 
                 if (!in_array($ext, ["jpg","jpeg","png"])) {
-                    $mensajesError[] = "Formato no permitido (solo jpg, jpeg, png).";
+                    $errorMessages[] = "Formato no permitido (solo jpg, jpeg, png).";
                 }
 
                 if ($width > 600 || $height > 700) {
                     $errorMessages[] = "La imagen no puede superar 600x700 píxeles.";
                 }
 
-                $destinationC = "../assets/imagenes/" . basename($real_name);
-                $query = $con->prepare("SELECT id FROM productos WHERE imagen = :imagen");
-                $query->execute([":imagen" => $destinationC]);
-                if ($query->fetch()) {
+                // Standardized DB image path for absolute rendering
+                $dbImagePath = "assets/images/" . basename($realName);
+                
+                $checkImgStmt = $db->prepare("SELECT id FROM productos WHERE imagen = :image");
+                $checkImgStmt->execute([":image" => $dbImagePath]);
+                if ($checkImgStmt->fetch()) {
                     $errorMessages[] = "Ya existe una imagen con ese nombre en la base de datos.";
                 }
             }
         }
 
-        // Insert product if no errors
+        // Insert new product if there are no validation errors
         if (empty($errorMessages)) {
-            $tmpImage = $_FILES["imagen"]["tmp_name"];
-            $imgName = $_FILES["imagen"]["name"];
-            $destination = "../assets/imagenes/" . $imgName;
+            $tmpImage = $_FILES["image"]["tmp_name"];
+            $imgName = basename($_FILES["image"]["name"]);
+            $dbImagePath = "assets/images/" . $imgName;
+            
+            // Calculate absolute server path to move the uploaded file securely
+            $targetDir = __DIR__ . "/../assets/images/";
+            $serverPath = $targetDir . $imgName;
 
-            if (move_uploaded_file($tmpImage, $destination)) {
+            // Ensure the directory exists before doing anything else
+            if (!is_dir($targetDir)) {
+                mkdir($targetDir, 0777, true); 
+            }
 
-                $stmt = $con->prepare("INSERT INTO productos (nombre, id_categoria, descripcion, precio, imagen) 
-                                       VALUES (:nombre, :categoria, :descripcion, :precio, :imagen)");
-                $stmt->execute([
-                    ":nombre" => $name,
-                    ":categoria" => $categoryId,
-                    ":descripcion" => $description,
-                    ":precio" => $price,
-                    ":imagen" => $destination,
+            if (move_uploaded_file($tmpImage, $serverPath)) {
+
+                $insertStmt = $db->prepare("INSERT INTO productos (nombre, id_categoria, descripcion, precio, imagen, estado)
+                                            VALUES (:name, :category, :description, :price, :image, 'activo')");
+
+                $insertStmt->execute([
+                    ":name" => $name,
+                    ":category" => $categoryId,
+                    ":description" => $description,
+                    ":price" => $price,
+                    ":image" => $dbImagePath
                 ]);
 
-                if ($stmt->rowCount() > 0) {
-                    header("Location: productoConsulta.php?nameN=" . urlencode($name));
+                if ($insertStmt->rowCount() > 0) {
+                    // Redirect to product list with translated success parameter
+                    header("Location: /products/product_list.php?created_product=" . urlencode($name));
                     exit;
                 } else {
                     $errorMessages[] = "Ha ocurrido un error con la base de datos.";
                 }
             } else {
-                $errorMessages[] = "Error inesperado al subir la imagen. Inténtelo de nuevo.";
+                $errorMessages[] = "Error al guardar la imagen en el servidor.";
             }
         }
     }
 
-    // Get categories for dropdown
-    $catQuery = $con->query("SELECT id, nombre FROM categorias ORDER BY nombre ASC");
-    $categories = $catQuery->fetchAll();
+    // Fetch categories with aliases
+    $catQuery = $db->query("SELECT id, nombre AS name FROM categorias ORDER BY nombre ASC");
+    $categories = $catQuery->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
@@ -119,11 +131,11 @@
     <title>Nuevo producto</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
-    <div class="d-flex justify-content-center align-items-center onix-bg">
+    <div class="d-flex justify-content-center align-items-center onix-bg py-5">
         <div class="p-4 onix-card">
             <h2 class="text-center mb-4 fw-bold">Crear producto</h2>
 
@@ -137,52 +149,54 @@
             </div>
 
             <!-- Client-side errors -->
-            <div id="errores" class="mb-3 text-danger fw-semibold"></div>
+            <div id="errors" class="mb-3 text-danger fw-semibold"></div>
 
-            <form name="fCreacion" id="fCreacion" method="post" action="productoCrear.php" enctype="multipart/form-data">
+            <form name="create_form" id="create_form" method="post" action="/products/product_create.php" enctype="multipart/form-data">
                 <p class="mb-3 text-center fw-semibold">Rellena los siguientes datos para crear un nuevo producto.</p>
+                
                 <div class="mb-3">
-                    <label class="form-label">Nombre del producto</label>
-                    <input type="text" class="form-control onix-input" name="nombre" id="nombre" maxlength="100" value="<?= isset($_POST['nombre']) ? htmlspecialchars($_POST['nombre']) : '' ?>">
+                    <label for="name" class="form-label">Nombre del producto</label>
+                    <input type="text" class="form-control onix-input" name="name" id="name" maxlength="100" value="<?= isset($_POST['name']) ? htmlspecialchars($_POST['name']) : '' ?>">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Descripción</label>
-                    <input type="text" class="form-control onix-input" name="descripcion" id="descripcion" maxlength="255" value="<?= isset($_POST['descripcion']) ? htmlspecialchars($_POST['descripcion']) : '' ?>">
+                    <label for="description" class="form-label">Descripción</label>
+                    <input type="text" class="form-control onix-input" name="description" id="description" maxlength="255" value="<?= isset($_POST['description']) ? htmlspecialchars($_POST['description']) : '' ?>">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Precio (€)</label>
-                    <input type="text" class="form-control onix-input" name="precio" id="precio" maxlength="10" value="<?= isset($_POST['precio']) ? htmlspecialchars($_POST['precio']) : '' ?>">
+                    <label for="price" class="form-label">Precio (€)</label>
+                    <input type="text" class="form-control onix-input" name="price" id="price" maxlength="10" value="<?= isset($_POST['price']) ? htmlspecialchars($_POST['price']) : '' ?>">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Categoría</label>
-                    <select name="categoriaId" id="categoriaId" class="form-select onix-input">
+                    <label for="category_id" class="form-label">Categoría</label>
+                    <select name="category_id" id="category_id" class="form-select onix-input">
                         <option value="">-- Seleccione una categoría --</option>
                         <?php foreach ($categories as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat['id']) ?>"
-                                <?= (isset($_POST['categoriaId']) && $_POST['categoriaId'] == $cat['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cat['nombre']) ?>
+                            <option value="<?= htmlspecialchars((string)$cat['id']) ?>"
+                                <?= (isset($_POST['category_id']) && $_POST['category_id'] == $cat['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cat['name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Imagen</label>
-                    <input type="file" class="form-control onix-input" name="imagen" id="imagen" accept=".jpg, .jpeg, .png">
+                    <label for="image" class="form-label">Imagen</label>
+                    <input type="file" class="form-control onix-input" name="image" id="image" accept=".jpg, .jpeg, .png">
                 </div>
 
                 <div class="d-grid gap-3">
-                    <button type="submit" class="btn fw-semibold btn-onix" name="enviar">Crear producto</button>
+                    <button type="submit" class="btn fw-semibold btn-onix" name="create_submit">Crear producto</button>
                     <hr class="onix-divider">
-                    <a href="productoConsulta.php" class="btn btn-outline-secondary">Volver</a>
+                    <a href="/products/product_list.php" class="btn btn-outline-secondary">Volver</a>
                 </div>
             </form>
         </div>
     </div>
-    <script src="productosValidacionForm.js"></script>
+    
+    <script src="/products/products_validation_form.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
