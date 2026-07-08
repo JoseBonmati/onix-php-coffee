@@ -63,15 +63,15 @@ CREATE TABLE `productos` (
 --
 
 INSERT INTO `productos` (`id`, `id_categoria`, `nombre`, `descripcion`, `precio`, `imagen`, `estado`) VALUES
-(11, 3, 'Bocadillo salchichas', 'Bocadillo de salchichas blancas.', 6.98, '../assets/imagenes/Bocadillo salchichas.jpg', 'activo'),
-(12, 2, 'Bocadillo jamón serrano', 'Bocadillo de jamón serrano del bueno.', 9.99, '../assets/imagenes/Bocadillo jamón serrano.jpg', 'activo'),
-(14, 2, 'Bocadillo Salmón', 'Bocadillo de salmón fresco', 6.99, '../assets/imagenes/Bocadillo Salmón.jpg', 'activo'),
-(15, 3, 'Bocadillo pechuga queso', 'Bocadillo de pechuga de pollo y queso cheddar.', 6.99, '../assets/imagenes/Bocadillo pechuga queso.jpg', 'activo'),
-(16, 2, 'Bocadillo pavo tomate', 'Bocadillo de lonchas de pavo y tomate a rodajas.', 4.99, '../assets/imagenes/Bocadillo pavo tomate.jpg', 'activo'),
-(17, 3, 'Bocadillo tortilla', 'Bocadillo de tortilla poco hecha.', 6.99, '../assets/imagenes/Bocadillo tortilla.jpg', 'activo'),
-(18, 6, 'La Monstruosa', 'Hamburguesa con 3 carnes de vacuno, triple de bacon y triple de queso cheddar.', 10.99, '../assets/imagenes/La Monstruosa.jpg', 'activo'),
-(19, 6, 'La Completa', 'Hamburguesa con medallón de vacuno y bacon, cebolla, tomate, lechuga y queso cheddar.', 9.99, '../assets/imagenes/La Completa.jpg', 'activo'),
-(20, 6, 'La Piba', 'Hamburguesa con medallón de vacuno, rúcula, queso de cabra, lechuga, tomate y cebolla frita.', 9.99, '../assets/imagenes/La Piba.jpg', 'activo');
+(11, 3, 'Bocadillo salchichas', 'Bocadillo de salchichas blancas.', 6.98, 'assets/images/Bocadillo salchichas.jpg', 'activo'),
+(12, 2, 'Bocadillo jamón serrano', 'Bocadillo de jamón serrano del bueno.', 9.99, 'assets/images/Bocadillo jamón serrano.jpg', 'activo'),
+(14, 2, 'Bocadillo Salmón', 'Bocadillo de salmón fresco', 6.99, 'assets/images/Bocadillo Salmón.jpg', 'activo'),
+(15, 3, 'Bocadillo pechuga queso', 'Bocadillo de pechuga de pollo y queso cheddar.', 6.99, 'assets/images/Bocadillo pechuga queso.jpg', 'activo'),
+(16, 2, 'Bocadillo pavo tomate', 'Bocadillo de lonchas de pavo y tomate a rodajas.', 4.99, 'assets/images/Bocadillo pavo tomate.jpg', 'activo'),
+(17, 3, 'Bocadillo tortilla', 'Bocadillo de tortilla poco hecha.', 6.99, 'assets/images/Bocadillo tortilla.jpg', 'activo'),
+(18, 6, 'La Monstruosa', 'Hamburguesa con 3 carnes de vacuno, triple de bacon y triple de queso cheddar.', 10.99, 'assets/images/La Monstruosa.jpg', 'activo'),
+(19, 6, 'La Completa', 'Hamburguesa con medallón de vacuno y bacon, cebolla, tomate, lechuga y queso cheddar.', 9.99, 'assets/images/La Completa.jpg', 'activo'),
+(20, 6, 'La Piba', 'Hamburguesa con medallón de vacuno, rúcula, queso de cabra, lechuga, tomate y cebolla frita.', 9.99, 'assets/images/La Piba.jpg', 'activo');
 
 -- --------------------------------------------------------
 

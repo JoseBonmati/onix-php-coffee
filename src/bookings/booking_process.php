@@ -1,53 +1,50 @@
 <?php
 
-    require_once "../utilidades/conectar_db.php";
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
 
     // Restrict access: only logged users
     if (!isset($_SESSION["id"])) {
-        header("Location: ../usuarios/login.php?acceso=denegado");
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    $con = conectar();
-    $userId = $_SESSION["id"];
+    $userId = (int)$_SESSION["id"];
 
     // Collect data from the form
-    $date = $_POST["fecha"] ?? "";
-    $time = $_POST["hora"] ?? "";
-    $people = isset($_POST["personas"]) ? (int)$_POST["personas"] : 0;
+    $date = $_POST["date"] ?? "";
+    $time = $_POST["time"] ?? "";
+    $people = isset($_POST["people"]) ? (int)$_POST["people"] : 0;
 
     // Basic validation
-    if (empty($date) || empty($time) || $people < 1) {
-        header("Location: ../contacto.php?error=datosInvalidos");
-        exit;
-    }
-
-    // Validate maximum number of people allowed
-    if ($people > 30) {
-        header("Location: ../contacto.php?error=datosInvalidos");
+    if (empty($date) || empty($time) || $people < 1 || $people > 30) {
+        header("Location: /contact.php?error=invalid_data");
         exit;
     }
 
     // Validate date format YYYY-MM-DD
     if (!preg_match("/^\d{4}-\d{2}-\d{2}$/", $date)) {
-        header("Location: ../contacto.php?error=fechaInvalida");
+        header("Location: /contact.php?error=invalid_date");
         exit;
     }
 
-    // Validate that the date exists
+    // Validate that the date exists in the calendar
     $datePieces = explode("-", $date);
-    if (!checkdate($datePieces[1], $datePieces[2], $datePieces[0])) {
-        header("Location: ../contacto.php?error=fechaInvalida");
+    if (!checkdate((int)$datePieces[1], (int)$datePieces[2], (int)$datePieces[0])) {
+        header("Location: /contact.php?error=invalid_date");
         exit;
     }
 
-    // Validate that it is not past the date
+    // Validate that it is not a past date
     $today = new DateTime("today");
     $reservationDate = new DateTime($date);
 
     if ($reservationDate < $today) {
-        header("Location: ../contacto.php?error=fechaPasada");
+        header("Location: /contact.php?error=past_date");
         exit;
     }
 
@@ -56,14 +53,14 @@
         $currentHour = (new DateTime())->format("H:i");
 
         if ($time <= $currentHour) {
-            header("Location: ../contacto.php?error=horaInvalida");
+            header("Location: /contact.php?error=invalid_time");
             exit;
         }
     }
 
     // Validate that it is not Sunday
     if ($reservationDate->format("w") == 0) { // 0 = Sunday
-        header("Location: ../contacto.php?error=domingo");
+        header("Location: /contact.php?error=sunday");
         exit;
     }
 
@@ -74,41 +71,40 @@
     ];
 
     if (!in_array($time, $allowedHours)) {
-        header("Location: ../contacto.php?error=horaInvalida");
+        header("Location: /contact.php?error=invalid_time");
         exit;
     }
 
     // Validate maximum capacity (50 people per hour)
     $maximumCapacity = 50;
 
-    $query = $con->prepare("SELECT SUM(num_personas) AS total FROM reservas WHERE fecha = :fecha AND hora = :hora");
-
+    $query = $db->prepare("SELECT SUM(num_personas) AS total FROM reservas WHERE fecha = :date AND hora = :time");
     $query->execute([
-        ":fecha" => $date,
-        ":hora" => $time
+        ":date" => $date,
+        ":time" => $time
     ]);
 
-    $totalCurrent = (int)$query->fetch()["total"];
+    $totalCurrent = (int)$query->fetch(PDO::FETCH_ASSOC)["total"];
     $totalAfterReservation = $totalCurrent + $people;
 
     if ($totalAfterReservation > $maximumCapacity) {
-        header("Location: ../contacto.php?error=aforoCompleto");
+        header("Location: /contact.php?error=fully_booked");
         exit;
     }
 
-    // Insert reserve
-    $insert = $con->prepare("INSERT INTO reservas (id_usuario, fecha, hora, num_personas)
-                             VALUES (:id, :fecha, :hora, :personas)");
+    // Insert booking
+    $insert = $db->prepare("INSERT INTO reservas (id_usuario, fecha, hora, num_personas) VALUES (:user_id, :date, :time, :people)");
 
     $insert->execute([
-        ":id" => $userId,
-        ":fecha" => $date,
-        ":hora" => $time,
-        ":personas" => $people
+        ":user_id" => $userId,
+        ":date" => $date,
+        ":time" => $time,
+        ":people" => $people
     ]);
 
-    $reserveId = $con->lastInsertId(); 
-    header("Location: reservaConfirmada.php?id=" . $reserveId); 
+    // Retrieve the generated ID and redirect to confirmation page
+    $bookingId = $db->lastInsertId(); 
+    header("Location: /bookings/booking_confirmation.php?id=" . $bookingId); 
     exit;
 
 ?>

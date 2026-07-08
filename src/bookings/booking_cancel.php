@@ -1,48 +1,52 @@
 <?php
 
-    require_once "../utilidades/conectar_db.php";
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
 
     // Restrict access: only logged users
     if (!isset($_SESSION["id"])) {
-        header("Location: ../usuarios/login.php?acceso=denegado");
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    $con = conectar();
-    $userId = $_SESSION["id"];
-    $role = $_SESSION["rol"];
+    $userId = (int)$_SESSION["id"];
+    $role = $_SESSION["role"] ?? "user";
 
-    // Check that a reserve ID is received
+    // Check that a booking ID is received
     if (!isset($_GET["id"])) {
-        header("Location: reservaConsulta.php?error=reservaNoExiste");
+        header("Location: /bookings/booking_list.php?error=booking_not_found");
         exit;
     }
 
-    $reserveId = (int) $_GET["id"];
+    $bookingId = (int) $_GET["id"];
 
-    $sql = $con->prepare("SELECT id, id_usuario, fecha, hora, num_personas, estado FROM reservas WHERE id = :id");
-    $sql->execute([":id" => $reserveId]);
-    $reserve = $sql->fetch();
+    // Use aliases to map properties consistently
+    $sql = $db->prepare("SELECT id, id_usuario AS user_id, fecha AS date, hora AS time, num_personas AS people, estado AS status FROM reservas WHERE id = :id");
+    $sql->execute([":id" => $bookingId]);
+    $booking = $sql->fetch(PDO::FETCH_ASSOC);
 
     // Check that it exists
-    if (!$reserve) {
-        header("Location: reservaConsulta.php?error=reservaNoExiste");
+    if (!$booking) {
+        header("Location: /bookings/booking_list.php?error=booking_not_found");
         exit;
     }
 
     // Check permissions
-    if ($role === "usuario" && $reserve["id_usuario"] != $userId) {
-        header("Location: reservaConsulta.php?error=noAutorizado");
+    if ($role === "user" && $booking["user_id"] != $userId) {
+        header("Location: /bookings/booking_list.php?error=unauthorized");
         exit;
     }
 
     // Check that the date has not passed.
     $today = strtotime(date("Y-m-d"));
-    $reservationDate = strtotime($reserve["fecha"]);
+    $reservationDate = strtotime($booking["date"]);
 
     if ($reservationDate < $today) {
-        header("Location: reservaConsulta.php?error=noCancelable");
+        header("Location: /bookings/booking_list.php?error=not_cancellable");
         exit;
     }
 
@@ -50,30 +54,29 @@
     if ($reservationDate == $today) {
         $currentHour = (new DateTime())->format("H:i");
 
-        if ($reserve["hora"] <= $currentHour) {
-            header("Location: reservaConsulta.php?error=noCancelable");
+        if ($booking["time"] <= $currentHour) {
+            header("Location: /bookings/booking_list.php?error=not_cancellable");
             exit;
         }
     }
 
     // Check status
-    if ($reserve["estado"] === "cancelada") {
-        header("Location: reservaConsulta.php?error=noCancelable");
+    if ($booking["status"] === "cancelada") {
+        header("Location: /bookings/booking_list.php?error=not_cancellable");
         exit;
     }
 
     // Users can only cancel if it is confirmed
-    if ($role === "usuario" && $reserve["estado"] !== "confirmada") {
-        header("Location: reservaConsulta.php?error=noCancelable");
+    if ($role === "user" && $booking["status"] !== "confirmada") {
+        header("Location: /bookings/booking_list.php?error=not_cancellable");
         exit;
     }
 
     // Cancel reserve
-    $update = $con->prepare("UPDATE reservas SET estado = 'cancelada' WHERE id = :id");
+    $update = $db->prepare("UPDATE reservas SET estado = 'cancelada' WHERE id = :id");
+    $update->execute([":id" => $bookingId]);
 
-    $update->execute([":id" => $reserveId]);
-
-    header("Location: reservaConsulta.php?reservaCancelada=1");
+    header("Location: /bookings/booking_list.php?cancelled_booking=1");
     exit;
 
 ?>

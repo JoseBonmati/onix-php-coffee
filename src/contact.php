@@ -30,9 +30,7 @@
             
             <!-- Messages -->
             <div class="mb-3">
-
                 <?php
-
                     if (isset($_GET["error"])) {
                         $error = htmlspecialchars($_GET["error"]);
 
@@ -58,9 +56,7 @@
                             echo "<p class='alert alert-danger text-center mb-4'>No se ha encontrado la reserva.</p>";
                         }
                     }
-
                 ?>
-            
             </div>
 
             <!-- Client-side errors -->
@@ -75,19 +71,18 @@
 
                             <!-- Calendar header -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <button id="cal-prev" type="button" class="btn btn-sm btn-outline-onix px-3">
+                                <button id="cal_prev" type="button" class="btn btn-sm btn-outline-onix px-3">
                                     <i class="bi bi-chevron-left"></i>
                                 </button>
 
-                                <h3 id="cal-month-year" class="mb-0 text-onix fw-bold"></h3>
+                                <h3 id="cal_month_year" class="mb-0 text-onix fw-bold"></h3>
 
-                                <button id="cal-next" type="button" class="btn btn-sm btn-outline-onix px-3">
+                                <button id="cal_next" type="button" class="btn btn-sm btn-outline-onix px-3">
                                     <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
 
-                            <!-- Calendar grid container -->
-                            <div id="cal-grid" class="table-responsive"></div>
+                            <div id="cal_grid" class="table-responsive"></div>
 
                         </div>
                     </div>
@@ -104,8 +99,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="guests" class="form-label">Personas</label>
-                                <select id="guests" name="guests" class="form-select">
+                                <label for="people" class="form-label">Personas</label>
+                                <select id="people" name="people" class="form-select">
                                     <option selected disabled value="">Seleccione</option>
                                     <?php for ($i = 1; $i <= 30; $i++): ?>
                                         <option value="<?= $i ?>"><?= $i ?> persona<?= $i > 1 ? 's' : '' ?></option>
@@ -120,7 +115,6 @@
                                 </select>
                             </div>
                             
-
                             <div class="text-center mt-4">
                                 <?php if (isset($_SESSION["id"])): ?>
                                     <button type="submit" class="btn btn-onix w-100">Reservar</button>

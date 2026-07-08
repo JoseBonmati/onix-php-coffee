@@ -1,35 +1,40 @@
 <?php
-    require_once "../utilidades/conectar_db.php";
-    session_start();
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    require_once __DIR__ . "/../utils/Database.php";
+    $db = Database::getConnection();
 
     // Restrict access: only logged users
     if (!isset($_SESSION["id"])) {
-        header("Location: ../usuarios/login.php?acceso=denegado");
+        header("Location: /users/login.php?error=access_denied");
         exit;
     }
 
-    $con = conectar();
-    $userId = $_SESSION["id"];
+    $userId = (int)$_SESSION["id"];
 
-    // Check that a reserve ID is received
+    // Check that a booking ID is received
     if (!isset($_GET["id"])) {
-        header("Location: ../contacto.php");
+        header("Location: /contact.php");
         exit;
     }
 
-    $reserveId = (int) $_GET["id"];
+    $bookingId = (int) $_GET["id"];
     
-    $sql = $con->prepare("SELECT id, fecha, hora, num_personas FROM reservas WHERE id = :id AND id_usuario = :idUsuario");
+    // Fetch booking details using aliases for consistency
+    $sql = $db->prepare("SELECT id, fecha AS date, hora AS time, num_personas AS people FROM reservas WHERE id = :id AND id_usuario = :user_id");
 
     $sql->execute([
-        ":id" => $reserveId,
-        ":idUsuario" => $userId
+        ":id" => $bookingId,
+        ":user_id" => $userId
     ]);
 
-    $reserve = $sql->fetch();
+    $booking = $sql->fetch(PDO::FETCH_ASSOC);
 
-    if (!$reserve) {
-        header("Location: ../contacto.php?error=reservaNoEncontrada");
+    if (!$booking) {
+        header("Location: /contact.php?error=booking_not_found");
         exit;
     }
 
@@ -43,8 +48,8 @@
     <title>Reserva confirmada</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="../estilos.css">
-    <link rel="icon" type="image/x-icon" href="../assets/logos/onix-favicon.ico"/>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="/assets/brand/onix-favicon.ico"/>
 </head>
 <body>
     <div class="container py-5">
@@ -59,15 +64,15 @@
 
                     <h4 class="fw-bold text-onix mb-3">Detalles de la reserva</h4>
 
-                    <p class="mb-1"><strong>ID de reserva:</strong> <?= $reserve["id"] ?></p>
-                    <p class="mb-1"><strong>Fecha:</strong> <?= date("d/m/Y", strtotime($reserve["fecha"])) ?></p>
-                    <p class="mb-1"><strong>Hora:</strong> <?= htmlspecialchars($reserve["hora"]) ?></p>
-                    <p class="mb-3"><strong>Personas:</strong> <?= (int)$reserve["num_personas"] ?></p>
+                    <p class="mb-1"><strong>ID de reserva:</strong> <?= htmlspecialchars((string)$booking["id"]) ?></p>
+                    <p class="mb-1"><strong>Fecha:</strong> <?= date("d/m/Y", strtotime($booking["date"])) ?></p>
+                    <p class="mb-1"><strong>Hora:</strong> <?= htmlspecialchars((string)$booking["time"]) ?></p>
+                    <p class="mb-3"><strong>Personas:</strong> <?= htmlspecialchars((string)$booking["people"]) ?></p>
 
                     <hr class="onix-divider my-4">
 
                     <div class="d-grid gap-3 mt-4">
-                        <a href="../index.php" class="btn btn-outline-onix fw-semibold">Volver</a>
+                        <a href="/index.php" class="btn btn-outline-onix fw-semibold">Volver</a>
                     </div>
                 </div>
             </div>
