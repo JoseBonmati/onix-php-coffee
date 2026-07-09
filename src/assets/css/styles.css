@@ -30,22 +30,20 @@ a {
     padding: 2rem;
 }
 
-.onix-card {
+.onix-card, .onix-card-wide {
     background: rgba(20, 20, 20, 0.85);
     border-radius: 15px;
     width: 100%;
-    max-width: 420px;
     box-shadow: 0 0 20px rgba(232, 111, 28, 0.25);
     backdrop-filter: blur(8px);
 }
 
+.onix-card {
+    max-width: 420px;
+}
+
 .onix-card-wide {
-    background: rgba(20, 20, 20, 0.85);
-    border-radius: 15px;
-    width: 100%;
     max-width: 1000px;
-    box-shadow: 0 0 20px rgba(232, 111, 28, 0.25);
-    backdrop-filter: blur(8px);
 }
 
 .onix-input {
@@ -108,6 +106,8 @@ a {
     margin: 0;
 }
 
+/* Tables */
+
 .onix-table {
     background-color: #1A1A1A;
     color: #F1F1F1;
@@ -164,6 +164,8 @@ a {
     white-space: nowrap;
 }
 
+/* Search Input */
+
 .onix-search {
     max-width: 350px;
 }
@@ -200,24 +202,17 @@ nav {
     text-shadow: 0 0 8px rgba(232, 111, 28, 0.5);
 }
 
-.nav-link img { 
+.nav-link img, .navbar-toggler {
     border: 2px solid #F1F1F1;
     transition: border-color 0.2s ease, box-shadow 0.2s ease; 
-}
-
-.nav-link:hover img { 
-    border-color: #E86F1C; 
-    box-shadow: 0 0 8px rgba(232, 111, 28, 0.5);
 }
 
 .navbar-toggler {
-    border: 2px solid #F1F1F1;
     padding: 6px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease; 
 }
 
-.navbar-toggler:hover {
-    border-color: #E86F1C;
+.nav-link:hover img, .navbar-toggler:hover { 
+    border-color: #E86F1C; 
     box-shadow: 0 0 8px rgba(232, 111, 28, 0.5);
 }
 
@@ -293,10 +288,10 @@ footer a:hover {
     animation: fade 20s infinite;
 }
 
-.cta-section .slide:nth-child(1) { background-image: url('../assets/images/cafeteria-local-1.jpg'); animation-delay: 0s; }
-.cta-section .slide:nth-child(2) { background-image: url('../assets/images/cafeteria-local-2.jpg'); animation-delay: 5s; }
-.cta-section .slide:nth-child(3) { background-image: url('../assets/images/cafeteria-local-3.jpg'); animation-delay: 10s; }
-.cta-section .slide:nth-child(4) { background-image: url('../assets/images/cafeteria-local-4.jpg'); animation-delay: 15s; }
+.cta-section .slide:nth-child(1) { background-image: url('/assets/images/cafeteria-local-1.jpg'); animation-delay: 0s; }
+.cta-section .slide:nth-child(2) { background-image: url('/assets/images/cafeteria-local-2.jpg'); animation-delay: 5s; }
+.cta-section .slide:nth-child(3) { background-image: url('/assets/images/cafeteria-local-3.jpg'); animation-delay: 10s; }
+.cta-section .slide:nth-child(4) { background-image: url('/assets/images/cafeteria-local-4.jpg'); animation-delay: 15s; }
 
 @keyframes fade {
     0%   { opacity: 0; }
