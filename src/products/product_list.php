@@ -166,7 +166,7 @@
                                     echo "<td>" . htmlspecialchars((string)$product->getPrice()) . " €</td>";
                                     echo "<td>" . htmlspecialchars((string)$product->getCategoryName()) . "</td>";
                                     echo "<td>" . htmlspecialchars((string)$product->getStatus()) . "</td>";
-                                    echo "<td><img src='" . htmlspecialchars((string)$product->getImage()) . "' class='img-thumbnail' style='max-height: 120px;'></td>";
+                                    echo "<td><img src='/" . htmlspecialchars((string)$product->getImage()) . "' class='img-thumbnail' style='max-height: 120px;'></td>";
 
                                     echo "<td><a class='text-onix fw-bold' href='/products/product_edit.php?id=" . $product->getId() . "'>
                                               <i class='bi bi-pencil-square'></i>

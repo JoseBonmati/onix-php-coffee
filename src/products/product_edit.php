@@ -129,7 +129,8 @@
                     if (!empty($oldRow["image"])) {
                         $oldServerPath = __DIR__ . "/../" . $oldRow["image"];
                         if (file_exists($oldServerPath) && is_file($oldServerPath)) {
-                            unlink($oldServerPath);
+                            // Supress warning with @ in case OS blocks deletion in Docker volume
+                            @unlink($oldServerPath);
                         }
                     }
                 }
